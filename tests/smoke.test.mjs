@@ -92,7 +92,6 @@ test("pages workflow runs smoke tests and uploads only the static site", () => {
   assert.match(workflow, /cp index\.html styles\.css game\.js \.nojekyll _site\//);
 });
 
-
 test("level clear flow clears the overlay before advancing to the next level", () => {
   const game = readText("game.js");
   assert.match(game, /function finishLevel\(\) \{[\s\S]*?setOverlay\(null\);[\s\S]*?beginCollectPhase\(state\.level \+ 1\);/);

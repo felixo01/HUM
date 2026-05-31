@@ -9,6 +9,7 @@ Data audytu: 2026-05-31
 - Boss Renata po każdym poziomie.
 - Plansza po bossie pokazująca wynik poziomu.
 - Zapis wyniku po ukończeniu poziomu oraz po game over, z zachowaniem modelu `week_key + level + nickname`.
+- Naprawiony overlay po `levelclear`, który wcześniej blokował przejście do kolejnego levelu.
 - Dźwięki retro przez Web Audio API.
 - Ranking per tydzień i per poziom.
 - Lokalny fallback rankingu w `localStorage`.
