@@ -17,10 +17,13 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /transitionKind/);
   assert.match(game, /beginBossIntroPhase/);
   assert.match(game, /beginLevelClearPhase/);
+  assert.match(game, /showLevelClearResults/);
   assert.match(game, /playSound\("/);
   assert.match(game, /leaderboardLevel/);
+  assert.match(game, /leaderboardSubmissionScore/);
   assert.match(game, /getLeaderboardScopeKey/);
   assert.match(game, /NEWSMONTH/);
+  assert.match(game, /Zapisz poziom/);
 });
 
 test("cloudflare backend and migration use per-level ranking", () => {
@@ -41,6 +44,7 @@ test("cloudflare backend and migration use per-level ranking", () => {
 
 test("pages workflow runs smoke tests and uploads only the static site", () => {
   const workflow = readText(".github/workflows/pages.yml");
+  assert.match(workflow, /Deploy KOLEGA HUMANOOB to GitHub Pages/);
   assert.match(workflow, /node --test tests\/smoke\.test\.mjs/);
   assert.match(workflow, /path: \.\/_site/);
   assert.match(workflow, /cp index\.html styles\.css game\.js \.nojekyll _site\//);

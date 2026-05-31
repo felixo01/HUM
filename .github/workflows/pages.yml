@@ -1,4 +1,4 @@
-name: Deploy Humanum to GitHub Pages
+name: Deploy KOLEGA HUMANOOB to GitHub Pages
 
 on:
   push:

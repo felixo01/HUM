@@ -8,6 +8,7 @@ Data audytu: 2026-05-31
 - Plansza przejściowa przed bossem z odliczaniem 3, 2, 1.
 - Boss Renata po każdym poziomie.
 - Plansza po bossie pokazująca wynik poziomu.
+- Zapis wyniku po ukończeniu poziomu oraz po game over, z zachowaniem modelu `week_key + level + nickname`.
 - Dźwięki retro przez Web Audio API.
 - Ranking per tydzień i per poziom.
 - Lokalny fallback rankingu w `localStorage`.
@@ -18,7 +19,7 @@ Data audytu: 2026-05-31
 
 - Late-game balans nadal wymaga realnego playtestu.
 - Kolejne bossy po Renacie są jeszcze do zaprojektowania.
-- Cloudflare leaderboard trzeba raz po wdrożeniu ręcznie potwierdzić w panelu, bo binding `DB` jest krytycznym elementem konfiguracji.
+- Cloudflare leaderboard trzeba po wdrożeniu ręcznie potwierdzić w panelu, bo binding `DB` jest krytycznym elementem konfiguracji.
 - Animacja biegu postaci i szczegóły bossowych pocisków nadal mogą być lekko poprawiane wizualnie.
 
 ## Wnioski

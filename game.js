@@ -43,6 +43,7 @@
   const hudLevel = document.getElementById("hud-level");
   const leaderboardToggle = document.getElementById("leaderboard-toggle");
   const leaderboardToggleHint = document.getElementById("leaderboard-toggle-hint");
+  const resultLabelPrefix = document.getElementById("result-label-prefix");
   const leaderboardCard = document.getElementById("leaderboard-card");
   const bossActionButton = document.getElementById("boss-action");
   const rankingButton = document.getElementById("ranking-button");
@@ -111,6 +112,8 @@
     leaderboardEntries: [],
     leaderboardLoading: false,
     leaderboardExpanded: false,
+    resultKind: "",
+    leaderboardSubmissionScore: 0,
     player: {
       lane: Math.floor(LANE_COUNT / 2),
       x: 0,
@@ -451,6 +454,34 @@
       : "Kliknij, aby otworzyć ranking";
   }
 
+  function syncResultOverlay(kind = state.resultKind || state.mode) {
+    const levelClear = kind === "levelclear";
+    const scoreValue = levelClear ? state.levelCompleteScore : state.score;
+    const prefix = levelClear ? "Wynik poziomu:" : "Najlepszy wynik:";
+
+    if (resultLabelPrefix) {
+      resultLabelPrefix.textContent = prefix;
+    }
+
+    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : "Koniec gry";
+    finalScore.textContent = String(scoreValue);
+    finalBest.textContent = String(levelClear ? scoreValue : state.bestScore);
+    restartButton.textContent = levelClear
+      ? (state.level >= MAX_LEVEL ? "Zakończ grę" : "Dalej")
+      : "Zagraj ponownie";
+    leaderboardSubmit.textContent = levelClear ? "Zapisz poziom" : "Zapisz wynik";
+    leaderboardToggleHint.textContent = state.leaderboardExpanded
+      ? (levelClear ? "Kliknij, aby ukryć ranking poziomu" : "Kliknij, aby ukryć ranking")
+      : (levelClear ? "Kliknij, aby otworzyć ranking poziomu" : "Kliknij, aby otworzyć ranking");
+    setLeaderboardStatus(
+      levelClear
+        ? "Wpisz login i zapisz wynik tego poziomu."
+        : "Wpisz login i zapisz wynik po zakończeniu gry.",
+      false
+    );
+    shareStatus.textContent = "";
+  }
+
   function readLocalLeaderboardStore() {
     try {
       const raw = localStorage.getItem(LOCAL_LEADERBOARD_KEY);
@@ -607,7 +638,8 @@
 
   async function submitLeaderboardEntry(event) {
     event.preventDefault();
-    if (state.mode !== "gameover") {
+    const isLevelClear = state.mode === "levelclear";
+    if (state.mode !== "gameover" && !isLevelClear) {
       return;
     }
 
@@ -620,7 +652,9 @@
 
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
     state.leaderboardLevel = clampLevel(state.level || state.leaderboardLevel);
-    setLeaderboardStatus("Zapisywanie wyniku...", true);
+    const scoreToSubmit = isLevelClear ? state.levelCompleteScore : state.score;
+    state.leaderboardSubmissionScore = scoreToSubmit;
+    setLeaderboardStatus(isLevelClear ? "Zapisywanie poziomu..." : "Zapisywanie wyniku...", true);
 
     try {
       const response = await fetchLeaderboardJson("/submit", {
@@ -631,7 +665,7 @@
         },
         body: JSON.stringify({
           nickname,
-          score: state.score,
+          score: scoreToSubmit,
           weekKey: state.leaderboardWeekKey,
           level: state.leaderboardLevel,
         }),
@@ -646,14 +680,19 @@
       state.leaderboardEntries = entries;
       renderLeaderboard(entries);
       leaderboardName.value = nickname;
-      setLeaderboardStatus("Wynik zapisany. Tabela odświeżona.", false);
+      setLeaderboardStatus(isLevelClear ? "Poziom zapisany. Tabela odświeżona." : "Wynik zapisany. Tabela odświeżona.", false);
     } catch (error) {
       console.error("Leaderboard submit failed:", error);
-      const localEntries = upsertLocalLeaderboardEntry(state.leaderboardWeekKey, state.leaderboardLevel, nickname, state.score);
+      const localEntries = upsertLocalLeaderboardEntry(state.leaderboardWeekKey, state.leaderboardLevel, nickname, scoreToSubmit);
       state.leaderboardEntries = localEntries;
       renderLeaderboard(localEntries);
       leaderboardName.value = nickname;
-      setLeaderboardStatus("Wynik zapisany lokalnie dla tego poziomu. Backend leaderboardu jest chwilowo niedostępny.", false);
+      setLeaderboardStatus(
+        isLevelClear
+          ? "Poziom zapisany lokalnie. Backend leaderboardu jest chwilowo niedostępny."
+          : "Wynik zapisany lokalnie dla tego poziomu. Backend leaderboardu jest chwilowo niedostępny.",
+        false
+      );
     }
   }
 
@@ -749,15 +788,18 @@
   }
 
   function beginCollectPhase(level = 1) {
+    state.mode = "playing";
     state.level = clamp(level, 1, MAX_LEVEL);
     state.phase = "collect";
     state.transitionKind = null;
+    state.resultKind = "";
     state.timeLeft = DURATION;
     state.levelProgress = 0;
     state.levelGoal = getLevelGoal(state.level);
     state.levelScoreStart = state.score;
     state.levelCompleteScore = 0;
     state.leaderboardLevel = state.level;
+    state.leaderboardSubmissionScore = state.score;
     state.playerHp = 3;
     state.combo = 0;
     state.bonusUnlocked = false;
@@ -834,6 +876,23 @@
       return;
     }
     beginCollectPhase(state.level + 1);
+  }
+
+  function showLevelClearResults() {
+    state.mode = "levelclear";
+    state.phase = "results";
+    state.resultKind = "levelclear";
+    state.leaderboardWeekKey = getIsoWeekKey(new Date());
+    state.leaderboardLevel = state.level;
+    state.leaderboardSubmissionScore = state.levelCompleteScore;
+    setOverlay("end");
+    setLeaderboardExpanded(true);
+    syncResultOverlay("levelclear");
+    renderLeaderboard([]);
+    loadLeaderboard();
+    syncHud();
+    syncBossActionButton();
+    showBanner(`Poziom ${state.level} zaliczony`, 1.0);
   }
 
   function defeatBoss() {
@@ -950,6 +1009,8 @@
     state.boss = null;
     state.attackCooldown = 0;
     state.transitionTimer = 0;
+    state.resultKind = "";
+    state.leaderboardSubmissionScore = state.score;
     state.popups.length = 0;
     state.flash = 0;
     state.shake = 0;
@@ -982,15 +1043,18 @@
 
   function endGame() {
     state.mode = "gameover";
-    state.phase = "collect";
+    state.phase = "results";
+    state.resultKind = "gameover";
     if (state.score > state.bestScore) {
       state.bestScore = state.score;
       saveBestScore(state.bestScore);
     }
-    finalScore.textContent = String(state.score);
-    finalBest.textContent = String(state.bestScore);
+    state.leaderboardSubmissionScore = state.score;
+    state.leaderboardLevel = clampLevel(state.level);
     setOverlay("end");
     setLeaderboardExpanded(false);
+    syncResultOverlay("gameover");
+    renderLeaderboard([]);
     showBanner("Koniec gry", 1.8);
     playSound("gameover");
     syncHud();
@@ -1382,7 +1446,7 @@
         if (state.transitionKind === "boss-intro") {
           beginBossPhase();
         } else if (state.transitionKind === "level-clear") {
-          finishLevel();
+          showLevelClearResults();
         }
       }
       syncHud();
@@ -2350,7 +2414,7 @@
       ctx.lineWidth = 2;
       ctx.strokeRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2);
 
-      ctx.fillStyle = PALETTE.accent2;
+      ctx.fillStyle = PALETTE.goldSoft;
       ctx.font = "bold 12px 'Courier New', monospace";
       ctx.textAlign = "center";
       if (state.transitionKind === "boss-intro") {
@@ -2478,7 +2542,11 @@
   }
 
   async function shareResult() {
-    const text = `KOLEGA HUMANOOB - wynik: ${state.score}. Najlepszy wynik: ${state.bestScore}.`;
+    const isLevelClear = state.mode === "levelclear";
+    const score = isLevelClear ? state.levelCompleteScore : state.score;
+    const text = isLevelClear
+      ? `KOLEGA HUMANOOB - poziom ${state.level}: ${score}. Najlepszy wynik: ${state.bestScore}.`
+      : `KOLEGA HUMANOOB - wynik: ${score}. Najlepszy wynik: ${state.bestScore}.`;
 
     try {
       if (navigator.share) {
@@ -2690,9 +2758,6 @@
     startButton.addEventListener("click", () => {
       startGame();
     });
-    restartButton.addEventListener("click", () => {
-      startGame();
-    });
     shareButton.addEventListener("click", () => {
       shareResult();
     });
@@ -2703,12 +2768,13 @@
     }
     if (rankingButton) {
       rankingButton.addEventListener("click", () => {
-        if (state.mode !== "gameover") {
-          showBanner("Ranking otwiera się po zakończeniu gry.", 1.1);
+        if (state.mode !== "gameover" && state.mode !== "levelclear") {
+          showBanner("Ranking otwiera się po zakończeniu poziomu lub gry.", 1.1);
           return;
         }
         state.leaderboardLevel = clampLevel(state.level);
         setLeaderboardExpanded(!state.leaderboardExpanded);
+        syncResultOverlay();
         if (state.leaderboardExpanded) {
           loadLeaderboard();
         }
@@ -2718,9 +2784,17 @@
     leaderboardToggle.addEventListener("click", () => {
       state.leaderboardLevel = clampLevel(state.level);
       setLeaderboardExpanded(!state.leaderboardExpanded);
+      syncResultOverlay();
       if (state.leaderboardExpanded) {
         loadLeaderboard();
       }
+    });
+    restartButton.addEventListener("click", () => {
+      if (state.mode === "levelclear") {
+        finishLevel();
+        return;
+      }
+      startGame();
     });
   }
 
@@ -2728,7 +2802,7 @@
     resizeCanvas();
     syncHud();
     renderLeaderboard([]);
-    setLeaderboardStatus("Wpisz login i zapisz wynik po zakończeniu gry.", false);
+    setLeaderboardStatus("Wpisz login i zapisz wynik po zakończeniu gry lub poziomu.", false);
     setOverlay("start");
     wireInput();
     wirePauseHandling();
