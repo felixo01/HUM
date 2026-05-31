@@ -1,0 +1,6 @@
+Asset sizes after export:
+- player-student.png: 532x980
+- diploma.png: 887x671
+- book.png: 919x878
+- newsmonth.png: 1086x1448
+- renata-boss.png: 1010x1225
