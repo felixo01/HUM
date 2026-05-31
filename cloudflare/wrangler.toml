@@ -5,4 +5,4 @@ compatibility_date = "2026-05-31"
 [[d1_databases]]
 binding = "DB"
 database_name = "humanum_leaderboard"
-database_id = "CHANGE_ME_AFTER_CREATING_THE_DB"
+database_id = "8c234b9a-66dc-4705-a072-e71a07b8797e"
