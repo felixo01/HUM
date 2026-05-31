@@ -105,7 +105,7 @@
     },
     mba: {
       key: "mba",
-      scale: 1.46,
+      scale: 1.56,
     },
     pka: {
       key: "pka",
@@ -113,7 +113,7 @@
     },
     lapowka: {
       key: "lapowka",
-      scale: 1.4,
+      scale: 1.5,
     },
   };
 
@@ -1092,6 +1092,7 @@
 
   function finishLevel() {
     state.transitionKind = null;
+    setOverlay(null);
     if (state.level >= MAX_LEVEL) {
       endGame();
       return;
