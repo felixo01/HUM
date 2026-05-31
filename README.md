@@ -1,87 +1,101 @@
-# HUMA-NUM
+# KOLEGA HUMANOOB
 
-HUMA-NUM to prosta, satyryczna gra 2D w stylu retro handhelda LCD. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo i odblokowuje absurdalne bonusy.
+KOLEGA HUMANOOB to prosta satyryczna gra 2D w stylu retro handhelda. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo, a po każdym poziomie mierzy się z bossową Renatą.
 
-Projekt działa jako czysta statyczna strona internetowa:
+Projekt działa jako czysta statyczna strona:
 
-- bez backendu do samej gry
 - bez npm i bez ciężkich zależności
+- bez backendu do samej gry
 - bez zewnętrznych grafik
 - gotowy do wrzucenia na GitHub Pages albo Vercel
 
-## Jak uruchomić lokalnie
+## Co jest w grze
+
+- 5 poziomów z rosnącą trudnością
+- plansza przejściowa przed bossem z odliczaniem 3, 2, 1
+- boss Renata po każdym poziomie
+- prosty system bossowych ataków z gazetą `NEWSMONTH`
+- bonusy `Łapówka`, `MBA` i `Psychologia`
+- proste dźwięki retro przez Web Audio API
+- ranking tygodniowy per poziom
+- fallback lokalny w `localStorage`, jeśli backend chwilowo nie działa
+
+## Uruchomienie lokalne
 
 1. Otwórz `index.html` bezpośrednio w przeglądarce.
 2. Jeśli wolisz lokalny serwer, użyj dowolnego prostego static servera.
 
-## Jak wrzucić na GitHub Pages
+## Sterowanie
 
-1. Wypchnij repozytorium na GitHub.
-2. Wejdź w ustawienia repozytorium.
-3. W sekcji Pages ustaw źródło na gałąź główną i katalog główny repozytorium.
-4. Zapisz zmiany i poczekaj na publikację.
+- desktop: strzałki lewo/prawo oraz `A`/`D`
+- mobile: przeciąganie palcem po dolnej części ekranu
+- w walce z bossem: klik lub przycisk akcji wykonuje rzut książką / atak
 
-## Online leaderboard na Cloudflare Pages Functions
+## GitHub Pages
 
-Leaderboard jest przygotowany jako prosty backend serverless na Cloudflare Pages Functions + D1.
+Repo ma workflow w `.github/workflows/pages.yml`, który:
 
-Co robi:
+1. uruchamia testy składni i testy dymne,
+2. kopiuje tylko statyczne pliki gry do `_site`,
+3. publikuje wynik jako GitHub Pages.
 
-- przyjmuje login gracza i wynik
-- zapisuje najlepszy wynik dla danego nicku w danym tygodniu
-- pokazuje ranking tylko dla bieżącego tygodnia
-- działa anonimowo, bez Supabase i bez logowania
+Wymagane pliki do publikacji:
 
-Pliki backendu znajdziesz w:
+- `index.html`
+- `styles.css`
+- `game.js`
+- `.nojekyll`
+
+## Cloudflare leaderboard
+
+Ranking działa jako backend serverless na Cloudflare Pages Functions lub Worker + D1.
+
+Model danych jest per tydzień i per poziom:
+
+- `week_key`
+- `level`
+- `nickname`
+- `score`
+- `updated_at`
+
+W repo są pliki:
 
 - `functions/api/[[path]].js`
-- `cloudflare/migrations/0001_init.sql`
 - `cloudflare/worker.js`
+- `cloudflare/migrations/0001_init.sql`
+- `cloudflare/migrations/0002_level_ranking.sql`
 - `cloudflare/wrangler.toml`
 
-Jak to uruchomić:
+Binding bazy D1:
 
-1. Zaloguj się do Cloudflare.
-2. Utwórz bazę D1 o nazwie `humanum_leaderboard`.
-3. Wstaw prawdziwy `database_id` do `cloudflare/wrangler.toml` albo podłącz bazę w ustawieniach Pages.
-4. Wgraj migrację `cloudflare/migrations/0001_init.sql`.
-5. Opublikuj projekt tak, aby obsługiwał folder `functions`.
-6. Jeśli korzystasz z innego hostingu niż Cloudflare, pozostaw meta tag `humanum-leaderboard-api` z zewnętrznym adresem workera jako fallback.
+- nazwa bindingu: `DB`
+- nazwa bazy: `humanum_leaderboard`
 
-Frontend najpierw spróbuje `\/api` na tym samym hoście, a potem zewnętrzny adres z meta taga.
+Frontend najpierw próbuje `\/api` na tym samym hoście, potem meta tag `humanum-leaderboard-api`, a na końcu publiczny fallback worker.
 
-## Jak wrzucić na Vercel
+## Testy
 
-1. Zaimportuj repozytorium do Vercel.
-2. Wybierz opcję bez frameworka lub hosting statyczny.
-3. Nie ustawiaj build command.
-4. Jako katalog publikacji użyj głównego folderu repozytorium.
+Uruchom lokalnie:
+
+```bash
+node --check game.js
+node --check cloudflare/worker.js
+node --check "functions/api/[[path]].js"
+node --test tests/smoke.test.mjs
+```
+
+Na Windows PowerShell najbezpieczniej uruchamiać właśnie komendy `node --...`. Jeśli wolisz `npm test`, użyj `npm.cmd test`.
 
 ## Plan dalszego rozwoju
 
-- więcej typów spadających obiektów i bonusów
-- lepsza tabela wyników z prostymi statystykami tygodnia
-- efekty dźwiękowe retro
-- tryb wyzwania z trudniejszym tempem
-- lokalne osiągnięcia zapisane w przeglądarce
-- delikatna animacja tła i menu startowego
+- dopracowanie balansu poziomów 2-5
+- kolejne bossy po Renacie
+- lepsze efekty dźwiękowe i animacje
+- dodatkowe statystyki rankingu
+- możliwy tryb challenge / endless
 
-## Dokumentacja rozwoju
+## Dokumentacja
 
-W repo są też pliki planujące kolejne kroki projektu:
-
-- [docs/LEVELS_BOSSES_SPEC.md](docs/LEVELS_BOSSES_SPEC.md)
-- [docs/OPEN_ITEMS.md](docs/OPEN_ITEMS.md)
-
-## Sterowanie
-
-- desktop: strzałki lewo/prawo oraz A/D
-- mobile: przeciąganie palcem po dolnej części ekranu
-
-## Zasady
-
-- zbieraj `Dyplom`
-- po 5 złapaniach pod rząd aktywuje się `Łapówka`
-- po złapaniu `Łapówki` pojawia się bonus `MBA`
-- złapanie `MBA` daje duży bonus punktowy, efekt retro i przyspieszenie
-- rundy trwają 60 sekund
+- [Spec poziomów i bossów](docs/LEVELS_BOSSES_SPEC.md)
+- [Lista otwartych decyzji](docs/OPEN_ITEMS.md)
+- [Audyt stanu projektu](docs/AUDIT.md)

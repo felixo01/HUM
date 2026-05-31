@@ -1,171 +1,137 @@
-# Huma-Num: spec trybu poziomów i bossów
+# KOLEGA HUMANOOB: spec trybu poziomów i bossów
 
-Status: szkic roboczy przed implementacją
+Status: implementacja bazowa działa, teraz dopinamy balans i dalsze bossy.
 
-## Cel
+## Cel trybu
 
-Rozszerzyć Huma-Num z prostego arcade o strukturę pięciu poziomów zakończonych walką z bossem.
-Tryb ma nadal być lekki, retro i czytelny na telefonie.
+Rozszerzyć KOLEGA HUMANOOB o pięć poziomów zakończonych walką z bossem. Tryb ma być nadal czytelny, satyryczny i grywalny na telefonie.
 
-## Założenie pętli rozgrywki
+## Pętla rozgrywki
 
-1. Gracz zbiera spadające dyplomy.
-2. Po ukończeniu poziomu pojawia się boss.
-3. Boss ma prostą walkę zręcznościową.
-4. Po pokonaniu bossa przechodzimy do kolejnego poziomu.
-5. Po piątym bossie kończy się cała sesja.
+1. Gracz łapie spadające dyplomy przez 60 sekund.
+2. Po zakończeniu czasu pojawia się plansza przejściowa z wynikiem poziomu i odliczaniem 3, 2, 1.
+3. Dopiero po odliczeniu wjeżdża boss Renata.
+4. Po pokonaniu bossów pojawia się plansza zaliczenia poziomu.
+5. Po piątym poziomie kończy się cała sesja.
 
-## Struktura pięciu poziomów
+## Aktualny stan implementacji
+
+- jest 5 poziomów,
+- trudność rośnie w czasie w ramach jednego poziomu,
+- boss Renata pojawia się po każdym poziomie,
+- po bossie pokazujemy osobną planszę przejściową,
+- ranking działa per tydzień i per poziom,
+- UI ma tylko cztery kafelki HUD, a poziom jest pokazany osobno poniżej.
+
+## Poziomy
 
 ### Poziom 1
 
-- Najłatwiejszy start.
-- Jasne dyplomy.
-- Mniej przeszkód.
-- Boss: Renata.
-- Renata ma najprostszy zestaw ataków.
-- Gracz dostaje najdłuższe okna reakcji.
+- najspokojniejszy start,
+- jasne dyplomy,
+- najłatwiejsze tempo spadania,
+- Renata ma najprostszy wzorzec ataku,
+- plansza przed bossem służy do wejścia w rytm gry.
 
 ### Poziom 2
 
-- Większa prędkość spadania.
-- Krótsze okna reakcji.
-- Dyplomy w bordowej wersji kolorystycznej.
-- Renata staje się szybsza i zaczyna mieszać dwa typy ataku.
-- Pojawia się pierwszy wyraźny rytm "atak - przerwa - kontratak".
+- większe tempo spadania,
+- pojawia się więcej przeszkód,
+- dyplomy dostają ciemniejszą kolorystykę,
+- Renata zaczyna częściej rzucać gazetami.
 
 ### Poziom 3
 
-- Jeszcze szybszy rytm.
-- Dyplomy zielone.
-- Więcej ruchu w tle.
-- Renata dostaje bardziej wymyślny wzorzec ruchu.
-- Gracz ma krótsze okno na trafienie, ale nadal czytelne.
+- szybszy rytm gry,
+- zielona wersja dyplomów,
+- psychologia może wpadać trochę częściej,
+- Renata dostaje krótsze przerwy.
 
 ### Poziom 4
 
-- Trudniejszy timing.
-- Więcej fałszywych sygnałów.
-- Intensywniejsze kolory i mocniejsze tempo.
-- Renata zaczyna "czytać" pozycję gracza i rzucać częściej.
-- Wymagane są bardziej świadome uniki i lepszy timing ataku.
+- wyraźnie gęstszy spawn,
+- boss jest bardziej agresywny,
+- pojawia się drugi pocisk albo większa presja czasowa,
+- gracze muszą częściej wykorzystywać ruch boczny.
 
 ### Poziom 5
 
-- Finałowy, najszybszy etap.
-- Najgęstszy spawn.
-- Najbardziej agresywny boss.
-- Renata ma najbardziej złożony rytm ataków.
-- To ma być finał, ale nadal możliwy do opanowania bez losowego chaosu.
+- finał,
+- najwyższe tempo,
+- najbardziej agresywna wersja Renaty,
+- nadal ma być trudny, ale nie chaotyczny.
 
-## Boss 1: Renata
+## Boss: Renata
 
-### Opis wizualny
+### Wygląd
 
-- Kobieta z krótkimi, czarnymi włosami.
-- Wyraźna, prosta sylwetka pixel-art.
-- Ekran prezentuje podpis: `Boss: Renata`.
+- krótkie czarne włosy,
+- czytelna sylwetka pixel-art,
+- prosty, satyryczny styl,
+- podpis na ekranie: `BOSS RENATA`.
 
-### Ruch i zachowanie
+### Zachowanie
 
-- Renata porusza się w ograniczonym zakresie poziomym.
-- Gracz musi unikać jej ataków i atakować w przerwach.
-- Jej atak jest prosty, czytelny i nieprzesadnie szybki.
-
-### Ataki Renaty
-
-- Rzuca małymi czerwonymi gazetkami z napisem `Newsweek`.
-- Gazetki lecą po łuku lub po prostej, ale zawsze czytelnie.
-- Wzrost trudności polega na zwiększeniu częstotliwości, nie na chaosie.
+- boss pojawia się dopiero po planszy 3, 2, 1,
+- rzuca czerwonymi gazetami `NEWSMONTH`,
+- potrafi czytać pozycję gracza i celować w jego tor,
+- im wyższy poziom, tym krótsze przerwy między rzutami.
 
 ### Atak gracza
 
-- Gracz naciska strzałki lewo/prawo, by ustawić pozycję.
-- Pacja / kliknięcie / przycisk akcji wykonuje kopnięcie.
-- Alternatywna wersja do rozważenia: rzut książką.
+- gracz przemieszcza się lewo/prawo,
+- atak odbywa się książką albo kopnięciem,
+- boss dostaje obrażenia po trafieniu.
 
-## Wymagana logika walki
+## Plansze przejściowe
 
-- Boss ma pasek zdrowia.
-- Gracz trafia bossa w oknie po jego ataku.
-- Trafienie zadaje punkty i zmniejsza HP bossa.
-- Po zejściu HP do zera następuje przejście do następnego poziomu.
-- Wynik poziomu to suma:
-  - punktów za dyplomy,
-  - punktów za trafienia bossa,
-  - premii za ukończenie poziomu.
-- Do rankingu zapisujemy wynik osobno dla każdego poziomu.
-- Przy zapisie rankingowym zapisujemy:
-  - login,
-  - numer poziomu,
-  - wynik,
-  - czas zapisu.
-- Login ma być unikalny zgodnie z regułą bazy:
-  - albo globalnie,
-  - albo w parze `login + level`, jeśli później uznamy, że jeden gracz może mieć osobny wpis dla każdego poziomu.
+### Przed bossem
 
-## Zasada trudności
+- pokazujemy wynik bieżącego poziomu,
+- pokazujemy `BOSS RENATA`,
+- pokazujemy odliczanie 3, 2, 1,
+- dopiero po tym boss wjeżdża na planszę.
 
-- Każdy kolejny poziom ma szybszy spawn i krótszy czas reakcji.
-- Gra ma być trudniejsza, ale nadal możliwa do ogarnięcia.
-- Nie może zamienić się w losowy spam.
-- Przyrost ma być liniowo-czytelny, a nie skokowy:
-  - level 1 jest wyraźnie spokojniejszy,
-  - każdy następny level dokłada 1-2 nowe utrudnienia,
-  - boss Renata rośnie w sile przez częstotliwość, warianty ataku i szybsze przerwy,
-  - nie dodajemy od razu wszystkich mechanik naraz.
+### Po bossie
 
-## Model przyrostu trudności
+- pokazujemy, że poziom został zaliczony,
+- pokazujemy wynik poziomu po walce z Renatą,
+- po chwili przechodzimy do kolejnego etapu albo do końca gry.
 
-Proponowany kierunek:
+## Ranking
 
-1. Zwiększać tylko 1 główny parametr na poziom, np. szybkość spadania.
-2. Drugi parametr podnosić delikatnie, np. częstotliwość bossa.
-3. Wprowadzać nowe zachowanie bossa dopiero od poziomu 2 lub 3.
-4. Zostawić czytelne "okno zwycięstwa" nawet w poziomie 5.
-5. Unikać losowego chaosu, który nie daje się nauczyć.
+- ranking jest per tydzień i per poziom,
+- wpis zawiera login, poziom, wynik i czas zapisu,
+- ten sam login może istnieć osobno dla różnych poziomów,
+- ranking ma fallback lokalny, jeśli backend chwilowo nie odpowiada.
 
-## Kolory dyplomów
+## Balans i trudność
 
-Proponowana progresja:
+Zasada jest prosta:
 
-- Poziom 1: jasny pergamin.
-- Poziom 2: bordowy.
-- Poziom 3: zielony.
-- Poziom 4: ciemniejszy odcień z wysokim kontrastem.
-- Poziom 5: finałowy wariant najbardziej agresywny wizualnie.
+- level 1 ma być wyraźnie łatwiejszy od reszty,
+- każdy kolejny poziom dokłada tylko 1-2 nowe utrudnienia,
+- wzrost tempa ma być czytelny,
+- boss ma być coraz groźniejszy, ale nadal do nauczenia.
 
-## Artefakty i ikonki
-
-Do narysowania w Canvasie:
+## Artefakty Canvas
 
 - `Dyplom`
-- `Książka`
-- `Newsweek`
+- `Łapówka`
+- `MBA`
+- `Psychologia`
+- `PKA`
+- `NEWSMONTH`
 - `Renata`
 - pasek HP bossa
-- napis `Boss: Renata`
-
-## Zasady stylu
-
-- bez fotorealistycznych grafik
-- bez zewnętrznych assetów
-- wszystko w Canvasie
-- pixel-art i proste kształty
-- czytelność ważniejsza niż detal
-
-## Co ma zostać po staremu
-
-- sterowanie na telefonie i desktopie
-- prosta obsługa pauzy
-- retro klimat
-- satyryczny ton
+- plansza przejściowa
 
 ## Kryterium sukcesu
 
 Tryb jest gotowy, jeśli:
 
-- da się przejść pięć poziomów,
-- każdy level ma własny rytm,
-- Renata działa jak czytelny pierwszy boss,
-- gracz rozumie, co ma robić bez czytania instrukcji po kilka razy.
+- da się przejść 5 poziomów,
+- boss Renata jest czytelna,
+- plansze przed i po bossie są zrozumiałe bez instrukcji,
+- ranking nie miesza poziomów,
+- gra działa dobrze na desktopie i telefonie.

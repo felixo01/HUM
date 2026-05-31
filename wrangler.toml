@@ -1,5 +1,5 @@
-name = "humanum-leaderboard"
-main = "worker.js"
+name = "kolega-humanoob"
+pages_build_output_dir = "."
 compatibility_date = "2026-05-31"
 
 [[d1_databases]]

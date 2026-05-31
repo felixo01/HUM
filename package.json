@@ -1,0 +1,8 @@
+{
+  "name": "huma-num",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/smoke.test.mjs"
+  }
+}

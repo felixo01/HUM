@@ -3,6 +3,7 @@
   const LOCAL_LEADERBOARD_KEY = "humanum-local-leaderboard";
   const LEADERBOARD_META_NAME = "humanum-leaderboard-api";
   const LEADERBOARD_API_FALLBACK = "https://humanumleaderboard.felix-7d1.workers.dev";
+  const MAX_LEVEL = 5;
   const DURATION = 60;
   const LANE_COUNT = 5;
   const START_SCORE = 0;
@@ -39,9 +40,12 @@
   const banner = document.getElementById("banner");
   const finalScore = document.getElementById("final-score");
   const finalBest = document.getElementById("final-best");
+  const hudLevel = document.getElementById("hud-level");
   const leaderboardToggle = document.getElementById("leaderboard-toggle");
   const leaderboardToggleHint = document.getElementById("leaderboard-toggle-hint");
   const leaderboardCard = document.getElementById("leaderboard-card");
+  const bossActionButton = document.getElementById("boss-action");
+  const rankingButton = document.getElementById("ranking-button");
   const shareStatus = document.getElementById("share-status");
   const leaderboardWeek = document.getElementById("leaderboard-week");
   const leaderboardForm = document.getElementById("leaderboard-form");
@@ -52,6 +56,13 @@
   const startButton = document.getElementById("start-button");
   const restartButton = document.getElementById("restart-button");
   const shareButton = document.getElementById("share-button");
+  const AudioCtor = window.AudioContext || window.webkitAudioContext || null;
+
+  const audio = {
+    context: null,
+    master: null,
+    unlocked: false,
+  };
 
   const view = {
     width: 0,
@@ -64,6 +75,14 @@
     timeLeft: DURATION,
     score: START_SCORE,
     bestScore: loadBestScore(),
+    level: 1,
+    phase: "collect",
+    transitionKind: null,
+    levelProgress: 0,
+    levelGoal: 6,
+    levelScoreStart: 0,
+    levelCompleteScore: 0,
+    playerHp: 3,
     combo: 0,
     bonusUnlocked: false,
     spawnTimer: 0,
@@ -72,6 +91,11 @@
     pkaStorm: 0,
     cancelWave: 0,
     items: [],
+    bossShots: [],
+    playerShots: [],
+    boss: null,
+    attackCooldown: 0,
+    transitionTimer: 0,
     popups: [],
     flash: 0,
     shake: 0,
@@ -83,6 +107,7 @@
     lastFrame: 0,
     psychologyFx: 0,
     leaderboardWeekKey: getIsoWeekKey(new Date()),
+    leaderboardLevel: 1,
     leaderboardEntries: [],
     leaderboardLoading: false,
     leaderboardExpanded: false,
@@ -133,23 +158,211 @@
     return Math.floor(Math.random() * LANE_COUNT);
   }
 
+  function ensureAudioContext() {
+    if (!AudioCtor) {
+      return null;
+    }
+
+    if (!audio.context) {
+      audio.context = new AudioCtor();
+      audio.master = audio.context.createGain();
+      audio.master.gain.value = 0.08;
+      audio.master.connect(audio.context.destination);
+    }
+
+    if (audio.context.state === "suspended") {
+      audio.context.resume().catch(() => {});
+    }
+
+    audio.unlocked = true;
+    return audio.context;
+  }
+
+  function playTone({
+    freq = 440,
+    to = null,
+    type = "sine",
+    gain = 0.06,
+    duration = 0.12,
+    when = 0,
+    detune = 0,
+  } = {}) {
+    const context = ensureAudioContext();
+    if (!context || !audio.master) {
+      return;
+    }
+
+    const start = context.currentTime + when;
+    const osc = context.createOscillator();
+    const amp = context.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    if (to !== null) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(40, to), start + duration);
+    }
+    if (detune) {
+      osc.detune.setValueAtTime(detune, start);
+    }
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(Math.max(0.001, gain), start + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.connect(amp);
+    amp.connect(audio.master);
+    osc.start(start);
+    osc.stop(start + duration + 0.04);
+  }
+
+  function playNoise({
+    duration = 0.08,
+    gain = 0.03,
+    when = 0,
+    lowpass = 1200,
+  } = {}) {
+    const context = ensureAudioContext();
+    if (!context || !audio.master) {
+      return;
+    }
+
+    const start = context.currentTime + when;
+    const buffer = context.createBuffer(1, Math.max(1, Math.floor(context.sampleRate * duration)), context.sampleRate);
+    const channel = buffer.getChannelData(0);
+    for (let i = 0; i < channel.length; i += 1) {
+      channel[i] = Math.random() * 2 - 1;
+    }
+
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    const filter = context.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(lowpass, start);
+    const amp = context.createGain();
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(Math.max(0.001, gain), start + 0.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.connect(filter);
+    filter.connect(amp);
+    amp.connect(audio.master);
+    source.start(start);
+    source.stop(start + duration + 0.03);
+  }
+
+  function playSound(name) {
+    if (!AudioCtor) {
+      return;
+    }
+
+    ensureAudioContext();
+
+    switch (name) {
+      case "start":
+        playTone({ freq: 392, to: 523, type: "triangle", gain: 0.05, duration: 0.12 });
+        playTone({ freq: 659, to: 784, type: "triangle", gain: 0.035, duration: 0.14, when: 0.12 });
+        break;
+      case "catch":
+        playTone({ freq: 920, to: 1320, type: "triangle", gain: 0.045, duration: 0.08 });
+        break;
+      case "cash":
+        playTone({ freq: 560, to: 760, type: "square", gain: 0.05, duration: 0.08 });
+        playTone({ freq: 820, to: 1040, type: "square", gain: 0.035, duration: 0.08, when: 0.06 });
+        break;
+      case "mba":
+        playTone({ freq: 392, to: 523, type: "triangle", gain: 0.05, duration: 0.1 });
+        playTone({ freq: 523, to: 659, type: "triangle", gain: 0.045, duration: 0.1, when: 0.08 });
+        playTone({ freq: 659, to: 880, type: "triangle", gain: 0.04, duration: 0.12, when: 0.16 });
+        break;
+      case "psychologia":
+        playTone({ freq: 248, to: 196, type: "sine", gain: 0.035, duration: 0.16 });
+        playTone({ freq: 392, to: 312, type: "triangle", gain: 0.025, duration: 0.18, when: 0.05 });
+        break;
+      case "pka-alert":
+        playTone({ freq: 210, to: 160, type: "sawtooth", gain: 0.04, duration: 0.16 });
+        playTone({ freq: 150, to: 110, type: "square", gain: 0.03, duration: 0.18, when: 0.08 });
+        break;
+      case "pka-cancel":
+        playTone({ freq: 260, to: 120, type: "square", gain: 0.05, duration: 0.18 });
+        playNoise({ duration: 0.11, gain: 0.02, lowpass: 800, when: 0.02 });
+        break;
+      case "boss-intro":
+        playTone({ freq: 523, to: 392, type: "triangle", gain: 0.04, duration: 0.12 });
+        playTone({ freq: 392, to: 330, type: "triangle", gain: 0.04, duration: 0.12, when: 0.14 });
+        playTone({ freq: 330, to: 294, type: "triangle", gain: 0.05, duration: 0.16, when: 0.28 });
+        break;
+      case "boss-clear":
+        playTone({ freq: 330, to: 440, type: "triangle", gain: 0.05, duration: 0.12 });
+        playTone({ freq: 440, to: 587, type: "triangle", gain: 0.04, duration: 0.14, when: 0.12 });
+        playTone({ freq: 659, to: 784, type: "triangle", gain: 0.04, duration: 0.16, when: 0.26 });
+        break;
+      case "hit":
+        playNoise({ duration: 0.06, gain: 0.028, lowpass: 900 });
+        playTone({ freq: 140, to: 90, type: "square", gain: 0.03, duration: 0.08 });
+        break;
+      case "hurt":
+        playNoise({ duration: 0.08, gain: 0.035, lowpass: 500 });
+        playTone({ freq: 90, to: 70, type: "sawtooth", gain: 0.035, duration: 0.12 });
+        break;
+      case "level-clear":
+        playTone({ freq: 440, to: 523, type: "triangle", gain: 0.04, duration: 0.1 });
+        playTone({ freq: 587, to: 698, type: "triangle", gain: 0.04, duration: 0.1, when: 0.1 });
+        break;
+      case "gameover":
+        playTone({ freq: 392, to: 262, type: "triangle", gain: 0.05, duration: 0.16 });
+        playTone({ freq: 262, to: 196, type: "triangle", gain: 0.045, duration: 0.18, when: 0.16 });
+        break;
+      default:
+        break;
+    }
+  }
+
   function getRoundProgress() {
     return clamp(1 - state.timeLeft / DURATION, 0, 1);
   }
 
-  function getDifficulty(progress) {
+  function getDifficulty(progress, level = state.level) {
     const curve = Math.pow(progress, 1.35);
+    const levelBias = clamp((level - 1) / Math.max(1, MAX_LEVEL - 1), 0, 1) * 0.42;
+    const mix = clamp(curve * 0.72 + levelBias, 0, 1);
     return {
       progress,
-      curve,
-      diplomaSpeed: lerp(132, 320, curve),
-      diplomaSpeedJitter: lerp(0.18, 0.12, curve),
-      spawnInterval: lerp(0.96, 0.34, curve),
-      extraSpawnChance: lerp(0.08, 0.24, curve),
-      pkaDelayMin: lerp(14, 8.5, curve),
-      pkaDelayMax: lerp(20, 13, curve),
-      pkaSpeed: lerp(300, 470, curve),
-      pkaVerticalBoost: lerp(1.12, 1.36, curve),
+      curve: mix,
+      diplomaSpeed: lerp(128, 305, mix),
+      diplomaSpeedJitter: lerp(0.18, 0.12, mix),
+      spawnInterval: lerp(0.98, 0.38, mix),
+      extraSpawnChance: lerp(0.08, 0.21, mix),
+      pkaDelayMin: lerp(15, 9, mix),
+      pkaDelayMax: lerp(21, 14, mix),
+      pkaSpeed: lerp(280, 440, mix),
+      pkaVerticalBoost: lerp(1.1, 1.34, mix),
+    };
+  }
+
+  function getLevelGoal(level) {
+    return 4 + clamp(level, 1, MAX_LEVEL);
+  }
+
+  function getDiplomaTheme(level) {
+    const themes = [
+      { body: PALETTE.beigeSoft, stripe: PALETTE.gold, text: PALETTE.navyDark, accent: PALETTE.beige },
+      { body: "#e7c2cb", stripe: "#7b1731", text: "#2f1121", accent: "#f7d8df" },
+      { body: "#d9ead2", stripe: "#2d6b45", text: "#183523", accent: "#f2fbeb" },
+      { body: "#dbe5ff", stripe: "#295d95", text: "#112841", accent: "#f4f8ff" },
+      { body: "#e4daf6", stripe: "#6f3da0", text: "#291243", accent: "#fbf7ff" },
+    ];
+
+    return themes[clamp(level - 1, 0, themes.length - 1)];
+  }
+
+  function getBossConfig(level) {
+    const normalized = clamp((level - 1) / Math.max(1, MAX_LEVEL - 1), 0, 1);
+    return {
+      name: "Renata",
+      hp: 3 + level,
+      attackInterval: lerp(1.55, 0.82, normalized),
+      attackJitter: lerp(0.18, 0.08, normalized),
+      shotSpeed: lerp(220, 300, normalized),
+      shotSpread: lerp(0.02, 0.08, normalized),
+      shotCount: level >= 4 ? 2 : 1,
+      playerHp: 3,
+      label: `Boss Renata`,
     };
   }
 
@@ -202,8 +415,16 @@
     return `${utcDate.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
   }
 
-  function formatWeekLabel(weekKey) {
-    return weekKey ? `Tydzień ${weekKey}` : "Tydzień —";
+  function clampLevel(level) {
+    return clamp(Number(level) || 1, 1, MAX_LEVEL);
+  }
+
+  function getLeaderboardScopeKey(weekKey, level) {
+    return `${weekKey}::${clampLevel(level)}`;
+  }
+
+  function formatWeekLabel(weekKey, level = state.leaderboardLevel) {
+    return weekKey ? `Tydzień ${weekKey} · Poziom ${clampLevel(level)}` : "Tydzień —";
   }
 
   function sanitizeNickname(name) {
@@ -266,15 +487,24 @@
       .slice(0, 20);
   }
 
-  function getLocalLeaderboardEntries(weekKey) {
+  function getLocalLeaderboardEntries(weekKey, level = state.leaderboardLevel) {
     const store = readLocalLeaderboardStore();
-    const entries = Array.isArray(store[weekKey]) ? store[weekKey] : [];
+    const weekBucket = store[weekKey];
+    if (Array.isArray(weekBucket)) {
+      return clampLevel(level) === 1 ? sortLeaderboardEntries(weekBucket) : [];
+    }
+
+    const entries = weekBucket && typeof weekBucket === "object" ? weekBucket[String(clampLevel(level))] : [];
     return sortLeaderboardEntries(entries);
   }
 
-  function upsertLocalLeaderboardEntry(weekKey, nickname, score) {
+  function upsertLocalLeaderboardEntry(weekKey, level, nickname, score) {
     const store = readLocalLeaderboardStore();
-    const entries = Array.isArray(store[weekKey]) ? store[weekKey].slice() : [];
+    const bucketKey = String(clampLevel(level));
+    const existingWeekBucket = Array.isArray(store[weekKey])
+      ? { 1: store[weekKey].slice() }
+      : (store[weekKey] && typeof store[weekKey] === "object" ? { ...store[weekKey] } : {});
+    const entries = Array.isArray(existingWeekBucket[bucketKey]) ? existingWeekBucket[bucketKey].slice() : [];
     const updatedAt = new Date().toISOString();
     const existingIndex = entries.findIndex((entry) => String(entry.nickname || "") === nickname);
 
@@ -295,19 +525,20 @@
       });
     }
 
-    store[weekKey] = sortLeaderboardEntries(entries);
+    existingWeekBucket[bucketKey] = sortLeaderboardEntries(entries);
+    store[weekKey] = existingWeekBucket;
     writeLocalLeaderboardStore(store);
-    return store[weekKey];
+    return store[weekKey][bucketKey];
   }
 
   function renderLeaderboard(entries = []) {
-    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
+    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey, state.leaderboardLevel);
     leaderboardList.textContent = "";
 
     if (!entries.length) {
       const item = document.createElement("li");
       item.className = "leaderboard-entry leaderboard-empty";
-      item.textContent = "Brak wyników w tym tygodniu.";
+      item.textContent = "Brak wyników w tym tygodniu dla tego poziomu.";
       leaderboardList.appendChild(item);
       return;
     }
@@ -335,13 +566,14 @@
 
   async function loadLeaderboard() {
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
-    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
+    state.leaderboardLevel = clampLevel(state.level || state.leaderboardLevel);
+    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey, state.leaderboardLevel);
 
     state.leaderboardLoading = true;
     setLeaderboardStatus("Ładowanie tabeli...", true);
 
     try {
-      const response = await fetchLeaderboardJson(`/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}`, {
+      const response = await fetchLeaderboardJson(`/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}&level=${encodeURIComponent(state.leaderboardLevel)}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -356,15 +588,15 @@
       const entries = Array.isArray(payload.entries) ? payload.entries : [];
       state.leaderboardEntries = entries;
       renderLeaderboard(entries);
-      setLeaderboardStatus(entries.length ? "Wyniki online są gotowe." : "Na ten tydzień jeszcze nikt nie dodał wyniku.", false);
+      setLeaderboardStatus(entries.length ? "Wyniki online dla tego poziomu są gotowe." : "Na ten tydzień i poziom jeszcze nikt nie dodał wyniku.", false);
     } catch (error) {
       console.error("Leaderboard load failed:", error);
-      const localEntries = getLocalLeaderboardEntries(state.leaderboardWeekKey);
+      const localEntries = getLocalLeaderboardEntries(state.leaderboardWeekKey, state.leaderboardLevel);
       state.leaderboardEntries = localEntries;
       renderLeaderboard(localEntries);
       setLeaderboardStatus(
         localEntries.length
-          ? "Backend leaderboardu jest chwilowo niedostępny. Pokazuję zapis lokalny."
+          ? "Backend leaderboardu jest chwilowo niedostępny. Pokazuję zapis lokalny dla tego poziomu."
           : "Backend leaderboardu jest chwilowo niedostępny. Możesz zapisać wynik lokalnie.",
         false
       );
@@ -387,6 +619,7 @@
     }
 
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
+    state.leaderboardLevel = clampLevel(state.level || state.leaderboardLevel);
     setLeaderboardStatus("Zapisywanie wyniku...", true);
 
     try {
@@ -400,6 +633,7 @@
           nickname,
           score: state.score,
           weekKey: state.leaderboardWeekKey,
+          level: state.leaderboardLevel,
         }),
       });
 
@@ -415,11 +649,11 @@
       setLeaderboardStatus("Wynik zapisany. Tabela odświeżona.", false);
     } catch (error) {
       console.error("Leaderboard submit failed:", error);
-      const localEntries = upsertLocalLeaderboardEntry(state.leaderboardWeekKey, nickname, state.score);
+      const localEntries = upsertLocalLeaderboardEntry(state.leaderboardWeekKey, state.leaderboardLevel, nickname, state.score);
       state.leaderboardEntries = localEntries;
       renderLeaderboard(localEntries);
       leaderboardName.value = nickname;
-      setLeaderboardStatus("Wynik zapisany lokalnie. Backend leaderboardu jest chwilowo niedostępny.", false);
+      setLeaderboardStatus("Wynik zapisany lokalnie dla tego poziomu. Backend leaderboardu jest chwilowo niedostępny.", false);
     }
   }
 
@@ -450,9 +684,11 @@
 
   function syncHud() {
     hudTime.textContent = formatTime(state.timeLeft);
+    hudLevel.textContent = state.phase === "boss" ? `B${state.level}` : `L${state.level}/5`;
     hudScore.textContent = String(state.score);
     hudCombo.textContent = state.combo > 0 ? `x${state.combo}` : "0";
     hudBest.textContent = String(Math.max(state.bestScore, state.score));
+    syncBossActionButton();
   }
 
   function resizeCanvas() {
@@ -495,10 +731,211 @@
     overlayEnd.classList.toggle("overlay-visible", showEnd);
   }
 
+  function syncBossActionButton() {
+    if (!bossActionButton) {
+      return;
+    }
+    const bossMode = state.mode === "playing" && state.phase === "boss";
+    bossActionButton.hidden = !bossMode;
+    bossActionButton.disabled = !bossMode || state.attackCooldown > 0;
+    bossActionButton.textContent = state.attackCooldown > 0 ? "Chwila..." : "Kop / Książka";
+  }
+
+  function clearBattlefield() {
+    state.items.length = 0;
+    state.bossShots.length = 0;
+    state.playerShots.length = 0;
+    state.specialDrop = null;
+  }
+
+  function beginCollectPhase(level = 1) {
+    state.level = clamp(level, 1, MAX_LEVEL);
+    state.phase = "collect";
+    state.transitionKind = null;
+    state.timeLeft = DURATION;
+    state.levelProgress = 0;
+    state.levelGoal = getLevelGoal(state.level);
+    state.levelScoreStart = state.score;
+    state.levelCompleteScore = 0;
+    state.leaderboardLevel = state.level;
+    state.playerHp = 3;
+    state.combo = 0;
+    state.bonusUnlocked = false;
+    state.spawnTimer = 0;
+    state.pkaTimer = randomRange(13, 18);
+    state.pkaStorm = 0;
+    state.cancelWave = 0;
+    state.boss = null;
+    state.attackCooldown = 0;
+    state.transitionTimer = 0;
+    clearBattlefield();
+    showBanner(`Poziom ${state.level}`, 1.0);
+    syncHud();
+  }
+
+  function beginBossPhase() {
+    state.transitionKind = null;
+    const boss = getBossConfig(state.level);
+    state.phase = "boss";
+    state.boss = {
+      name: boss.name,
+      label: boss.label,
+      level: state.level,
+      x: view.width * 0.5,
+      y: view.height * 0.19,
+      width: Math.max(110, view.width * 0.24),
+      height: Math.max(98, view.height * 0.15),
+      hp: boss.hp,
+      maxHp: boss.hp,
+      attackTimer: randomRange(0.5, boss.attackInterval),
+      attackInterval: boss.attackInterval,
+      attackJitter: boss.attackJitter,
+      shotSpeed: boss.shotSpeed,
+      shotSpread: boss.shotSpread,
+      shotCount: boss.shotCount,
+    };
+    state.playerHp = boss.playerHp;
+    state.attackCooldown = 0;
+    state.spawnTimer = 0;
+    state.combo = 0;
+    state.bonusUnlocked = false;
+    state.pkaTimer = randomRange(14, 20);
+    clearBattlefield();
+    showBanner(`${boss.label} - poziom ${state.level}`, 1.35);
+    syncHud();
+  }
+
+  function beginBossIntroPhase() {
+    state.phase = "transition";
+    state.transitionKind = "boss-intro";
+    state.transitionTimer = 3;
+    state.levelCompleteScore = state.score - state.levelScoreStart;
+    state.boss = null;
+    state.attackCooldown = 0;
+    clearBattlefield();
+    playSound("boss-intro");
+  }
+
+  function beginLevelClearPhase() {
+    state.phase = "transition";
+    state.transitionKind = "level-clear";
+    state.transitionTimer = 2.2;
+    state.levelCompleteScore = state.score - state.levelScoreStart;
+    state.boss = null;
+    state.attackCooldown = 0;
+    clearBattlefield();
+    playSound("level-clear");
+  }
+
+  function finishLevel() {
+    state.transitionKind = null;
+    if (state.level >= MAX_LEVEL) {
+      endGame();
+      return;
+    }
+    beginCollectPhase(state.level + 1);
+  }
+
+  function defeatBoss() {
+    state.flash = Math.max(state.flash, 0.4);
+    state.shake = Math.max(state.shake, 0.2);
+    const bonus = 120 + state.level * 30;
+    state.score += bonus;
+    addPopup(`+${bonus}`, view.width * 0.5, view.height * 0.18, PALETTE.goldSoft);
+    state.levelCompleteScore = state.score - state.levelScoreStart;
+    showBanner(`Poziom ${state.level} zaliczony`, 1.1);
+    playSound("boss-clear");
+    beginLevelClearPhase();
+  }
+
+  function fireBook() {
+    if (state.mode !== "playing" || state.phase !== "boss" || !state.boss || state.attackCooldown > 0) {
+      return;
+    }
+
+    const cooldown = lerp(0.38, 0.25, (state.level - 1) / Math.max(1, MAX_LEVEL - 1));
+    state.attackCooldown = cooldown;
+    state.playerShots.push({
+      type: "book",
+      x: state.player.x,
+      y: state.player.y - state.player.height * 0.4,
+      vx: randomRange(-18, 18),
+      vy: -420 - state.level * 18,
+      w: 36,
+      h: 22,
+      life: 1.4,
+    });
+    addPopup("KSIĄŻKA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
+    state.flash = Math.max(state.flash, 0.1);
+  }
+
+  function spawnBossShot() {
+    if (!state.boss) {
+      return;
+    }
+
+    const boss = state.boss;
+    const count = boss.shotCount;
+    const spread = boss.shotSpread;
+
+    for (let i = 0; i < count; i += 1) {
+      const offset = count === 1 ? 0 : (i === 0 ? -1 : 1) * boss.width * 0.18;
+      const targetX = state.player.x + (i === 0 ? -1 : 1) * boss.width * spread;
+      state.bossShots.push({
+        type: "newsmonth",
+        x: boss.x + offset,
+        y: boss.y + boss.height * 0.44,
+        vx: 0,
+        vy: boss.shotSpeed * 0.94,
+        targetX,
+        w: 56,
+        h: 88,
+        life: 3.0,
+        wobble: Math.random() * Math.PI * 2,
+      });
+    }
+    boss.attackTimer = boss.attackInterval + randomRange(-boss.attackJitter, boss.attackJitter);
+  }
+
+  function hitBoss(damage, sourceX, sourceY) {
+    if (!state.boss) {
+      return;
+    }
+
+    state.boss.hp = Math.max(0, state.boss.hp - damage);
+    state.flash = Math.max(state.flash, 0.22);
+    state.shake = Math.max(state.shake, 0.15);
+    addPopup(`-${damage}`, sourceX, sourceY, PALETTE.goldSoft);
+    playSound("hit");
+    if (state.boss.hp <= 0) {
+      defeatBoss();
+    }
+  }
+
+  function hitPlayer(damage, sourceX, sourceY) {
+    state.playerHp = Math.max(0, state.playerHp - damage);
+    state.flash = Math.max(state.flash, 0.18);
+    state.shake = Math.max(state.shake, 0.22);
+    addPopup(`-${damage}`, sourceX, sourceY, PALETTE.redWarm);
+    playSound("hurt");
+    if (state.playerHp <= 0) {
+      showBanner("Renata wygrała", 1.1);
+      endGame();
+    }
+  }
+
   function resetRound() {
     state.mode = "playing";
     state.timeLeft = DURATION;
     state.score = START_SCORE;
+    state.level = 1;
+    state.phase = "collect";
+    state.transitionKind = null;
+    state.levelProgress = 0;
+    state.levelGoal = getLevelGoal(1);
+    state.levelScoreStart = 0;
+    state.levelCompleteScore = 0;
+    state.playerHp = 3;
     state.combo = 0;
     state.bonusUnlocked = false;
     state.spawnTimer = 0;
@@ -508,6 +945,11 @@
     state.cancelWave = 0;
     state.psychologyFx = 0;
     state.items.length = 0;
+    state.bossShots.length = 0;
+    state.playerShots.length = 0;
+    state.boss = null;
+    state.attackCooldown = 0;
+    state.transitionTimer = 0;
     state.popups.length = 0;
     state.flash = 0;
     state.shake = 0;
@@ -525,17 +967,22 @@
     setOverlay(null);
     shareStatus.textContent = "";
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
+    state.leaderboardLevel = state.level;
     setLeaderboardExpanded(false);
     syncHud();
+    syncBossActionButton();
   }
 
   function startGame() {
+    ensureAudioContext();
     resetRound();
     showBanner("Złap dyplomy, zanim uciekną!", 1.2);
+    playSound("start");
   }
 
   function endGame() {
     state.mode = "gameover";
+    state.phase = "collect";
     if (state.score > state.bestScore) {
       state.bestScore = state.score;
       saveBestScore(state.bestScore);
@@ -545,7 +992,9 @@
     setOverlay("end");
     setLeaderboardExpanded(false);
     showBanner("Koniec gry", 1.8);
+    playSound("gameover");
     syncHud();
+    syncBossActionButton();
     loadLeaderboard();
   }
 
@@ -581,7 +1030,7 @@
   function spawnItem(type, options = {}) {
     const lane = randomLane();
     const targetX = typeof options.targetX === "number" ? options.targetX : laneX(lane);
-    const difficulty = options.difficulty || getDifficulty(getRoundProgress());
+    const difficulty = options.difficulty || getDifficulty(getRoundProgress(), state.level);
     const speedFactor = 0.9 + Math.random() * difficulty.diplomaSpeedJitter;
     const item = {
       type,
@@ -595,6 +1044,7 @@
       h: type === "mba" ? 48 : type === "cash" ? 42 : type === "pka" ? 32 : type === "psychologia" ? 50 : 68,
       caught: false,
       wobble: Math.random() * Math.PI * 2,
+      theme: type === "diploma" ? options.theme || getDiplomaTheme(state.level) : null,
     };
 
     if (type === "pka") {
@@ -620,11 +1070,13 @@
     }
     state.bonusUnlocked = true;
     showBanner("Combo x5!", 1.2);
+    playSound("cash");
     queueSpecialDrop("cash", 0.15);
   }
 
   function triggerPkaAlert() {
     showBanner("UWAGA PKA!", 1.2);
+    playSound("pka-alert");
     const difficulty = getDifficulty(getRoundProgress());
     spawnItem("pka", {
       targetX: state.player.x + randomRange(-state.player.width * 0.35, state.player.width * 0.35),
@@ -639,6 +1091,7 @@
     state.flash = Math.max(state.flash, 0.28);
     state.shake = Math.max(state.shake, 0.22);
     showBanner("PKA! ANULOWANO", 1.15);
+    playSound("pka-cancel");
   }
 
   function catchItem(item) {
@@ -646,8 +1099,11 @@
 
     if (item.type === "diploma") {
       state.combo += 1;
-      state.score += 10 + Math.min(12, state.combo * 2);
-      addPopup(`+${10 + Math.min(12, state.combo * 2)}`, item.x, item.y, PALETTE.cream);
+      state.levelProgress += 1;
+      const points = 10 + Math.min(12, state.combo * 2);
+      state.score += points;
+      addPopup(`+${points}`, item.x, item.y, PALETTE.cream);
+      playSound("catch");
       if (state.combo >= 5 && !state.bonusUnlocked) {
         triggerBonusChain();
       }
@@ -655,6 +1111,7 @@
       state.score += 40;
       addPopup("+40", item.x, item.y, PALETTE.goldSoft);
       showBanner("Bonus MBA!", 1.15);
+      playSound("cash");
       queueSpecialDrop("mba", 0.28);
     } else if (item.type === "mba") {
       state.score += 250;
@@ -664,10 +1121,12 @@
       state.mbaFx = 1.35;
       state.speedBoost = 5;
       showBanner("MBA!", 1.2);
+      playSound("mba");
     } else if (item.type === "psychologia") {
       addPopup("OKULARNIK", item.x, item.y, PALETTE.mint);
       state.psychologyFx = 3;
       showBanner("PSYCHOLOGIA!", 1.15);
+      playSound("psychologia");
     } else if (item.type === "pka") {
       addPopup("ANUL.", item.x, item.y, PALETTE.goldSoft);
       triggerPkaCancel();
@@ -684,6 +1143,7 @@
         const penalty = 8 + Math.min(12, Math.floor(state.score * 0.04));
         state.score = Math.max(0, state.score - penalty);
         addPopup(`-${penalty}`, item.x, Math.max(24, item.y), PALETTE.redWarm);
+        playSound("pka-cancel");
       } else {
         addPopup("MISS", item.x, Math.min(view.height * 0.8, item.y), PALETTE.redWarm);
       }
@@ -695,6 +1155,10 @@
   }
 
   function updateItems(dt) {
+    if (state.phase !== "collect") {
+      return;
+    }
+
     const playerX = state.player.x;
     const playerY = state.player.y;
     const playerW = state.player.width;
@@ -770,6 +1234,84 @@
     }
   }
 
+  function updateBossBattle(dt) {
+    if (state.phase !== "boss" || !state.boss || state.mode !== "playing") {
+      return;
+    }
+
+    const boss = state.boss;
+    const playerX = state.player.x;
+    const playerY = state.player.y;
+    const playerW = state.player.width;
+    const playerH = state.player.height;
+    const bossLeft = boss.x - boss.width / 2;
+    const bossRight = boss.x + boss.width / 2;
+    const bossTop = boss.y - boss.height / 2;
+    const bossBottom = boss.y + boss.height / 2;
+    const playerLeft = playerX - playerW / 2;
+    const playerRight = playerX + playerW / 2;
+    const playerTop = playerY - playerH * 0.55;
+    const playerBottom = playerY + playerH * 0.25;
+
+    boss.attackTimer -= dt;
+    if (boss.attackTimer <= 0) {
+      spawnBossShot();
+    }
+
+    state.attackCooldown = Math.max(0, state.attackCooldown - dt);
+
+    for (let i = state.playerShots.length - 1; i >= 0; i -= 1) {
+      const shot = state.playerShots[i];
+      shot.x += shot.vx * dt;
+      shot.y += shot.vy * dt;
+      shot.life -= dt;
+
+      const shotLeft = shot.x - shot.w / 2;
+      const shotRight = shot.x + shot.w / 2;
+      const shotTop = shot.y - shot.h / 2;
+      const shotBottom = shot.y + shot.h / 2;
+      const overlapsBoss = shotRight >= bossLeft && shotLeft <= bossRight && shotBottom >= bossTop && shotTop <= bossBottom;
+
+      if (overlapsBoss) {
+        state.playerShots.splice(i, 1);
+        hitBoss(1, shot.x, shot.y);
+        continue;
+      }
+
+      if (shot.life <= 0 || shot.y < -80) {
+        state.playerShots.splice(i, 1);
+      }
+    }
+
+    for (let i = state.bossShots.length - 1; i >= 0; i -= 1) {
+      const shot = state.bossShots[i];
+      const drift = clamp(dt * 2.8, 0, 0.32);
+      shot.x += (shot.targetX - shot.x) * drift;
+      shot.y += shot.vy * dt;
+      shot.life -= dt;
+
+      const shotLeft = shot.x - shot.w / 2;
+      const shotRight = shot.x + shot.w / 2;
+      const shotTop = shot.y - shot.h / 2;
+      const shotBottom = shot.y + shot.h / 2;
+      const overlapsPlayer = shotRight >= playerLeft && shotLeft <= playerRight && shotBottom >= playerTop && shotTop <= playerBottom;
+
+      if (overlapsPlayer) {
+        state.bossShots.splice(i, 1);
+        hitPlayer(1, shot.x, shot.y);
+        continue;
+      }
+
+      if (shot.life <= 0 || shot.y > view.height + 80) {
+        state.bossShots.splice(i, 1);
+      }
+    }
+
+    if (state.boss && state.boss.hp <= 0) {
+      state.boss = null;
+    }
+  }
+
   function updateSpecialDrop(dt) {
     if (!state.specialDrop) {
       return;
@@ -832,37 +1374,56 @@
       return;
     }
 
-    state.timeLeft = Math.max(0, state.timeLeft - dt);
+    if (state.phase === "transition") {
+      state.transitionTimer = Math.max(0, state.transitionTimer - dt);
+      updatePopups(dt);
+      updateEffects(dt);
+      if (state.transitionTimer <= 0) {
+        if (state.transitionKind === "boss-intro") {
+          beginBossPhase();
+        } else if (state.transitionKind === "level-clear") {
+          finishLevel();
+        }
+      }
+      syncHud();
+      return;
+    }
+
     updatePlayer(dt);
 
-    const difficulty = getDifficulty(getRoundProgress());
-    state.spawnTimer += dt;
-    state.pkaTimer -= dt;
-    if (state.pkaTimer <= 0) {
-      triggerPkaAlert();
+    if (state.phase === "collect") {
+      state.timeLeft = Math.max(0, state.timeLeft - dt);
+      const difficulty = getDifficulty(getRoundProgress(), state.level);
+      state.spawnTimer += dt;
+      state.pkaTimer -= dt;
+      if (state.pkaTimer <= 0) {
+        triggerPkaAlert();
+      }
+
+      const spawnInterval = difficulty.spawnInterval;
+      while (state.spawnTimer >= spawnInterval) {
+        state.spawnTimer -= spawnInterval;
+        spawnItem("diploma", { difficulty, theme: getDiplomaTheme(state.level) });
+        if (Math.random() < difficulty.extraSpawnChance) {
+          spawnItem("diploma", { difficulty, theme: getDiplomaTheme(state.level) });
+        }
+        if (state.level >= 2 && Math.random() < lerp(0.015, 0.03, difficulty.curve)) {
+          spawnItem("psychologia", { difficulty });
+        }
+      }
+
+      updateSpecialDrop(dt);
+      updateItems(dt);
+      if (state.timeLeft <= 0) {
+        beginBossIntroPhase();
+      }
+    } else if (state.phase === "boss") {
+      updateBossBattle(dt);
     }
 
-    const spawnInterval = difficulty.spawnInterval;
-    while (state.spawnTimer >= spawnInterval) {
-      state.spawnTimer -= spawnInterval;
-      spawnItem("diploma", { difficulty });
-      if (Math.random() < difficulty.extraSpawnChance) {
-        spawnItem("diploma", { difficulty });
-      }
-      if (Math.random() < lerp(0.03, 0.07, difficulty.curve)) {
-        spawnItem("psychologia", { difficulty });
-      }
-    }
-
-    updateSpecialDrop(dt);
-    updateItems(dt);
     updatePopups(dt);
     updateEffects(dt);
     syncHud();
-
-    if (state.timeLeft <= 0) {
-      endGame();
-    }
   }
 
   function drawBackground() {
@@ -914,6 +1475,11 @@
     ctx.fillRect(0, platformY, w, h - platformY);
     ctx.fillStyle = "rgba(208, 214, 224, 0.08)";
     ctx.fillRect(0, platformY + 2, w, 2);
+
+    if (state.phase === "boss") {
+      ctx.fillStyle = "rgba(89, 12, 26, 0.12)";
+      ctx.fillRect(0, 0, w, h);
+    }
   }
 
   function drawCityStreet(w, h, y, density = 1) {
@@ -1022,6 +1588,28 @@
     for (const def of buildingDefs) {
       drawPixelBuilding(w, h, def, cityLine, waterLine);
     }
+
+    const labelDef = buildingDefs[5];
+    const labelW = snap4(w * labelDef.w * 0.72);
+    const labelH = snap4(Math.max(12, h * 0.032));
+    const labelX = snap4(w * labelDef.x + w * labelDef.w * 0.14);
+    const labelY = snap4(cityLine - h * labelDef.h - h * 0.035);
+    const labelCx = labelX + labelW / 2;
+    const labelCy = labelY + labelH / 2;
+    ctx.save();
+    ctx.shadowColor = "rgba(255, 78, 78, 0.95)";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "rgba(11, 22, 37, 0.28)";
+    ctx.fillRect(labelX - 2, labelY - 2, labelW + 4, labelH + 4);
+    ctx.fillStyle = "#fff0d8";
+    ctx.font = "bold 13px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Warsowia", labelCx, labelCy + 1);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(255, 52, 52, 0.68)";
+    ctx.fillText("Warsowia", labelCx + 0.5, labelCy + 0.5);
+    ctx.restore();
 
     drawPixelBridge(w * 0.13, cityLine, 0.9);
 
@@ -1190,6 +1778,7 @@
     const y = item.y;
     const w = item.w;
     const h = item.h;
+    const theme = item.theme || getDiplomaTheme(state.level);
 
     drawShadow(x, y + h, w, 12, 0.24);
 
@@ -1197,11 +1786,11 @@
     const y0 = snap4(y);
     const ww = snap4(w);
     const hh = snap4(h);
-    ctx.fillStyle = PALETTE.beigeSoft;
+    ctx.fillStyle = theme.body;
     ctx.fillRect(x0, y0, ww, hh);
-    ctx.fillStyle = PALETTE.gold;
+    ctx.fillStyle = theme.stripe;
     ctx.fillRect(x0, y0, 8, hh);
-    ctx.fillStyle = PALETTE.beige;
+    ctx.fillStyle = theme.accent;
     ctx.fillRect(x0 + 10, y0 + 8, ww - 16, 4);
     ctx.fillRect(x0 + 10, y0 + 20, ww - 20, 4);
     ctx.fillRect(x0 + 10, y0 + 32, ww - 14, 4);
@@ -1227,7 +1816,7 @@
       ctx.restore();
     }
 
-    ctx.fillStyle = PALETTE.navyDark;
+    ctx.fillStyle = theme.text;
     ctx.font = "bold 10px 'Courier New', monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
@@ -1239,6 +1828,10 @@
     const y = item.y;
     const w = item.w;
     const h = item.h;
+    const t = performance.now() / 1000;
+    const flicker = 1 + Math.sin(t * 12 + item.wobble) * 0.12;
+    const flicker2 = 1 + Math.sin(t * 18 + item.wobble * 1.7) * 0.15;
+    const flicker3 = 1 + Math.sin(t * 9 + item.wobble * 0.9 + 1.3) * 0.1;
 
     drawShadow(x, y + h, w, 10, 0.2);
 
@@ -1246,11 +1839,44 @@
     const y0 = snap4(y);
     const ww = snap4(w);
     const hh = snap4(h);
+
+    const flameBaseY = y0 - 8;
+    const flameTopY = y0 - 22 - Math.round(4 * flicker2);
+    const flameMidY = y0 - 16 - Math.round(3 * flicker3);
+
+    ctx.fillStyle = "rgba(255, 166, 58, 0.26)";
+    ctx.fillRect(x0 - 6, flameTopY + 6, ww + 12, 6);
+    ctx.fillStyle = "rgba(255, 214, 96, 0.4)";
+    ctx.fillRect(x0 - 2, flameBaseY - 2, ww + 4, 4);
+
+    ctx.fillStyle = "#ff5d18";
+    ctx.fillRect(x0 + 2, flameBaseY - 2, 10, 8 * flicker);
+    ctx.fillRect(x0 + 10, flameMidY, 8, 12 * flicker2);
+    ctx.fillRect(x0 + ww - 18, flameBaseY - 1, 8, 7 * flicker3);
+    ctx.fillRect(x0 + ww - 26, flameTopY + 3, 12, 10 * flicker2);
+
+    ctx.fillStyle = "#ff8924";
+    ctx.fillRect(x0 + 6, flameTopY + 2, 8, 14 * flicker2);
+    ctx.fillRect(x0 + ww - 22, flameMidY + 1, 10, 11 * flicker3);
+    ctx.fillRect(x0 + ww / 2 - 4, flameTopY, 12, 16 * flicker);
+
+    ctx.fillStyle = "#ffd870";
+    ctx.fillRect(x0 + 8, flameTopY + 6, 4, 6);
+    ctx.fillRect(x0 + ww / 2 - 1, flameTopY + 4, 2, 8);
+    ctx.fillRect(x0 + ww - 14, flameMidY + 4, 4, 5);
+
+    ctx.fillStyle = "#ff9a2f";
+    ctx.fillRect(x0 + 4, y0 - 8, ww - 8, 8 * flicker);
+    ctx.fillRect(x0 + 10, y0 - 14, 10, 8 * flicker2);
+    ctx.fillRect(x0 + ww - 18, y0 - 10, 8, 6 * flicker3);
+    ctx.fillStyle = PALETTE.goldSoft;
+    ctx.fillRect(x0 + 8, y0 - 4, 10, 6 * flicker);
+    ctx.fillRect(x0 + ww - 20, y0 - 2, 10, 4 * flicker2);
     ctx.fillStyle = PALETTE.redWarm;
     ctx.fillRect(x0, y0, ww, hh);
     ctx.fillStyle = PALETTE.redDark;
     ctx.fillRect(x0 + 4, y0 + 4, ww - 8, hh - 8);
-    ctx.fillStyle = PALETTE.goldSoft;
+    ctx.fillStyle = "#ffcc66";
     ctx.fillRect(x0, y0, ww, 4);
     ctx.fillRect(x0, y0 + hh - 4, ww, 4);
     ctx.fillStyle = PALETTE.cream;
@@ -1262,6 +1888,16 @@
     ctx.textAlign = "center";
     ctx.fillStyle = PALETTE.cream;
     ctx.fillText("PKA", x, y + h * 0.54);
+
+    ctx.fillStyle = "rgba(255, 200, 92, 0.8)";
+    ctx.fillRect(x0 + 6, y0 - 2, 4, 2);
+    ctx.fillRect(x0 + ww - 10, y0 - 1, 3, 2);
+    ctx.fillRect(x0 + ww / 2 - 1, y0 - 6, 2, 3);
+
+    ctx.fillStyle = "rgba(255, 224, 140, 0.75)";
+    ctx.fillRect(x0 + 2, y0 - 6, 2, 2);
+    ctx.fillRect(x0 + ww - 5, y0 - 8, 2, 2);
+    ctx.fillRect(x0 + ww / 2 + 6, y0 - 13, 2, 2);
   }
 
   function drawCash(item) {
@@ -1291,6 +1927,213 @@
     ctx.font = "bold 16px 'Courier New', monospace";
     ctx.textAlign = "center";
     ctx.fillText("ŁAPÓWKA", x, y + h * 0.62);
+  }
+
+  function drawBookShot(item) {
+    const x = item.x;
+    const y = item.y;
+    const w = item.w;
+    const h = item.h;
+
+    drawShadow(x, y + h, w, 8, 0.18);
+
+    const x0 = snap4(x - w / 2);
+    const y0 = snap4(y - h / 2);
+    const ww = snap4(w);
+    const hh = snap4(h);
+    ctx.fillStyle = "#6d3f23";
+    ctx.fillRect(x0, y0, ww, hh);
+    ctx.fillStyle = "#e6d7ae";
+    ctx.fillRect(x0 + 3, y0 + 2, ww - 6, hh - 4);
+    ctx.fillStyle = "#1f3352";
+    ctx.fillRect(x0 + ww - 8, y0 + 2, 4, hh - 4);
+    ctx.fillStyle = "#c79e52";
+    ctx.fillRect(x0 + 5, y0 + 5, ww - 14, 3);
+    ctx.fillStyle = "#6d3f23";
+    ctx.font = "bold 7px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("KSIAŻKA", x, y + 2);
+  }
+
+  function drawNewsmonthShot(item) {
+    const x = item.x;
+    const y = item.y;
+    const w = item.w;
+    const h = item.h;
+
+    drawShadow(x, y + h, w, 8, 0.18);
+
+    const wobble = Math.sin((performance.now() / 85) + item.wobble) * 0.6;
+    const x0 = snap4(x - w / 2 + wobble);
+    const y0 = snap4(y - h / 2);
+    const ww = snap4(w);
+    const hh = snap4(h);
+    ctx.fillStyle = "#8d0a1d";
+    ctx.fillRect(x0 - 1, y0 - 1, ww + 2, hh + 2);
+    ctx.fillStyle = "#d81d2c";
+    ctx.fillRect(x0, y0, ww, hh);
+
+    const mastheadH = Math.max(20, Math.round(hh * 0.24));
+    const bodyTop = y0 + mastheadH;
+    const bodyH = hh - mastheadH;
+
+    ctx.fillStyle = "#efefef";
+    ctx.fillRect(x0 + 2, y0 + 2, ww - 4, mastheadH - 4);
+    ctx.fillStyle = "#d81d2c";
+    ctx.fillRect(x0 + 3, y0 + 3, ww - 6, mastheadH - 6);
+    ctx.strokeStyle = "#fff1dd";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + 3, y0 + 3, ww - 6, mastheadH - 6);
+
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 13px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("NEWSMONTH", x, y0 + mastheadH / 2 - 1);
+    ctx.restore();
+
+    ctx.fillStyle = "#f5f1e8";
+    ctx.fillRect(x0 + 3, bodyTop + 3, ww - 6, bodyH - 6);
+    ctx.fillStyle = "#111114";
+    ctx.fillRect(x0 + 7, bodyTop + 9, ww - 14, bodyH - 18);
+
+    ctx.fillStyle = "#ffffff";
+    const silhouetteX = x0 + Math.round(ww * 0.42);
+    const silhouetteY = bodyTop + Math.round(bodyH * 0.12);
+    const figureW = Math.max(4, Math.round(ww * 0.16));
+    const figureH = Math.max(20, Math.round(bodyH * 0.48));
+    ctx.fillRect(silhouetteX, silhouetteY, figureW, figureH);
+    ctx.fillRect(silhouetteX - 4, silhouetteY + 6, figureW + 8, 4);
+    ctx.fillRect(silhouetteX - 2, silhouetteY + figureH, figureW + 4, 4);
+    ctx.fillRect(silhouetteX + 1, silhouetteY + 4, 2, figureH - 6);
+
+    ctx.fillStyle = "#f6f2ea";
+    ctx.fillRect(x0 + 11, bodyTop + 14, ww - 22, 3);
+    ctx.fillRect(x0 + 11, bodyTop + 22, ww - 28, 2);
+    ctx.fillRect(x0 + 11, bodyTop + 30, ww - 18, 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x0 + 11, bodyTop + bodyH - 12, ww - 22, 4);
+    ctx.fillStyle = "#d81d2c";
+    ctx.fillRect(x0 + 11, bodyTop + bodyH - 8, ww - 26, 2);
+  }
+
+  function drawRenataBoss(boss) {
+    const x = boss.x;
+    const y = boss.y;
+    const w = boss.width;
+    const h = boss.height;
+    const facing = state.player.x < boss.x ? -1 : 1;
+    const bob = Math.sin(performance.now() / 320) * 2;
+    const scale = Math.max(4, Math.round(w / 18));
+    const spriteW = 18;
+    const spriteH = 20;
+    const ox = Math.round(x - (spriteW * scale) / 2);
+    const oy = Math.round(y - (spriteH * scale) / 2 + bob);
+
+    drawShadow(x, y + h * 0.42, w * 0.4, 12, 0.22);
+
+    const px = (gx, gy, gw, gh, color) => {
+      const drawX = facing === 1 ? gx : spriteW - gx - gw;
+      ctx.fillStyle = color;
+      ctx.fillRect(ox + drawX * scale, oy + gy * scale, gw * scale, gh * scale);
+    };
+
+    px(4, 0, 10, 2, "#16161d");
+    px(3, 1, 12, 2, "#16161d");
+    px(2, 2, 14, 2, "#23232a");
+    px(3, 3, 12, 1, "#2b2b32");
+    px(4, 4, 10, 1, "#d9af8f");
+    px(4, 5, 10, 3, "#f0c4a1");
+    px(5, 5, 8, 1, "#f7d7bf");
+    px(5, 7, 2, 1, "#36506f");
+    px(11, 7, 2, 1, "#36506f");
+    px(6, 8, 2, 1, "#2b2a31");
+    px(10, 8, 2, 1, "#2b2a31");
+    px(7, 9, 1, 1, "#2b2a31");
+    px(10, 9, 1, 1, "#2b2a31");
+    px(4, 10, 10, 1, "#d8e1ec");
+    px(4, 11, 10, 5, "#23547f");
+    px(5, 11, 8, 4, "#2f678f");
+    px(6, 12, 6, 2, "#7ca4c4");
+    px(5, 13, 1, 3, "#f4c19d");
+    px(12, 13, 1, 3, "#f4c19d");
+    px(5, 16, 4, 3, "#5c2b3b");
+    px(9, 16, 4, 3, "#5c2b3b");
+    px(6, 17, 2, 2, "#492033");
+    px(10, 17, 2, 2, "#492033");
+    px(3, 12, 2, 4, "#f0c4a1");
+    px(13, 12, 2, 4, "#f0c4a1");
+    px(2, 13, 2, 2, "#1f2a42");
+    px(14, 13, 2, 2, "#1f2a42");
+    px(2, 11, 3, 1, "#2c4666");
+    px(13, 11, 3, 1, "#2c4666");
+
+    // Red newspaper in hand.
+    const paperSide = facing === 1 ? 0 : 1;
+    const paperX = paperSide === 0 ? 1 : 13;
+    px(paperX, 11, 4, 5, "#a41a2a");
+    px(paperX + 1, 12, 2, 3, "#7d0817");
+    px(paperX + 1, 12, 2, 1, "#ffe4d8");
+    px(paperX + 1, 14, 2, 1, "#ffe4d8");
+    ctx.fillStyle = "#fff0e8";
+    ctx.font = "bold 6px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("NEWS", ox + (facing === 1 ? 34 : 8), oy + 60);
+  }
+
+  function drawBossHud() {
+    if (state.phase !== "boss" || !state.boss) {
+      return;
+    }
+
+    const boss = state.boss;
+    const barW = Math.min(view.width * 0.62, 280);
+    const barH = 8;
+    const bx = view.width / 2 - barW / 2;
+    const by = 18;
+    const pct = clamp(boss.hp / boss.maxHp, 0, 1);
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = PALETTE.cream;
+    ctx.font = "bold 12px 'Courier New', monospace";
+    ctx.fillText(`BOSS RENATA`, view.width / 2, 12);
+    ctx.fillStyle = "rgba(10, 15, 25, 0.8)";
+    ctx.fillRect(bx, by, barW, barH);
+    ctx.fillStyle = PALETTE.redWarm;
+    ctx.fillRect(bx + 1, by + 1, Math.max(0, (barW - 2) * pct), barH - 2);
+    ctx.strokeStyle = "rgba(255, 244, 214, 0.18)";
+    ctx.strokeRect(bx, by, barW, barH);
+    ctx.fillStyle = PALETTE.cream;
+    ctx.font = "bold 10px 'Courier New', monospace";
+    ctx.fillText(`Poziom ${state.level}`, view.width / 2, by + 18);
+
+    const hpLabelX = view.width - 72;
+    const hpY = 16;
+    ctx.fillStyle = PALETTE.cream;
+    ctx.font = "bold 10px 'Courier New', monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("HP", hpLabelX, hpY + 2);
+    for (let i = 0; i < 3; i += 1) {
+      ctx.fillStyle = i < state.playerHp ? PALETTE.red : "rgba(255, 244, 214, 0.18)";
+      ctx.fillRect(hpLabelX + 18 + i * 12, hpY - 2, 8, 8);
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillRect(hpLabelX + 19 + i * 12, hpY - 1, 2, 2);
+    }
+    ctx.restore();
+  }
+
+  function drawPlayerShots() {
+    for (const shot of state.playerShots) {
+      drawBookShot(shot);
+    }
+  }
+
+  function drawBossShots() {
+    for (const shot of state.bossShots) {
+      drawNewsmonthShot(shot);
+    }
   }
 
   function drawMba(item) {
@@ -1488,6 +2331,59 @@
       ctx.font = "bold 24px 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.fillText("PAUZA", view.width / 2, view.height / 2);
+      return;
+    }
+
+    if (state.phase === "transition") {
+      ctx.fillStyle = "rgba(5, 12, 20, 0.52)";
+      ctx.fillRect(0, 0, view.width, view.height);
+
+      const panelW = Math.min(view.width * 0.8, 360);
+      const panelH = 146;
+      const panelX = (view.width - panelW) / 2;
+      const panelY = view.height * 0.2;
+      const countdown = Math.max(0, Math.ceil(state.transitionTimer));
+
+      ctx.fillStyle = "rgba(11, 22, 37, 0.96)";
+      ctx.fillRect(panelX, panelY, panelW, panelH);
+      ctx.strokeStyle = "rgba(255, 244, 214, 0.26)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2);
+
+      ctx.fillStyle = PALETTE.accent2;
+      ctx.font = "bold 12px 'Courier New', monospace";
+      ctx.textAlign = "center";
+      if (state.transitionKind === "boss-intro") {
+        ctx.fillText(`KONIEC POZIOMU ${state.level}`, view.width / 2, panelY + 22);
+
+        ctx.fillStyle = PALETTE.cream;
+        ctx.font = "bold 38px 'Courier New', monospace";
+        ctx.fillText(String(countdown), view.width / 2, panelY + 68);
+
+        ctx.fillStyle = PALETTE.accent;
+        ctx.font = "bold 14px 'Courier New', monospace";
+        ctx.fillText("BOSS RENATA", view.width / 2, panelY + 94);
+
+        ctx.fillStyle = "rgba(255, 244, 214, 0.72)";
+        ctx.font = "bold 11px 'Courier New', monospace";
+        ctx.fillText("Za chwilę wjeżdża boss", view.width / 2, panelY + 116);
+        ctx.fillText(`Wynik poziomu: ${state.levelCompleteScore}`, view.width / 2, panelY + 132);
+      } else {
+        ctx.fillText(`POZIOM ${state.level} ZALICZONY`, view.width / 2, panelY + 22);
+
+        ctx.fillStyle = PALETTE.cream;
+        ctx.font = "bold 26px 'Courier New', monospace";
+        ctx.fillText("BOSS RENATA", view.width / 2, panelY + 60);
+
+        ctx.fillStyle = PALETTE.accent;
+        ctx.font = "bold 13px 'Courier New', monospace";
+        ctx.fillText(`Wynik poziomu: ${state.levelCompleteScore}`, view.width / 2, panelY + 88);
+        ctx.fillText(`Za ${countdown} s zacznie się kolejny level`, view.width / 2, panelY + 108);
+
+        ctx.fillStyle = "rgba(255, 244, 214, 0.72)";
+        ctx.font = "bold 10px 'Courier New', monospace";
+        ctx.fillText(state.level >= MAX_LEVEL ? "To był już finał" : `Przygotuj się na poziom ${state.level + 1}`, view.width / 2, panelY + 128);
+      }
     }
   }
 
@@ -1570,17 +2466,24 @@
       }
     }
 
+    if (state.phase === "boss" && state.boss) {
+      drawRenataBoss(state.boss);
+      drawBossShots();
+      drawPlayerShots();
+      drawBossHud();
+    }
+
     drawPlayer();
     drawPopups();
   }
 
   async function shareResult() {
-    const text = `HUMA-NUM - wynik: ${state.score}. Najlepszy wynik: ${state.bestScore}.`;
+    const text = `KOLEGA HUMANOOB - wynik: ${state.score}. Najlepszy wynik: ${state.bestScore}.`;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "HUMA-NUM",
+          title: "KOLEGA HUMANOOB",
           text,
         });
         shareStatus.textContent = "Gotowe do udostępnienia.";
@@ -1620,13 +2523,22 @@
   }
 
   function handleKeyboard(event) {
-    if (state.mode !== "playing") {
+    if (state.mode !== "playing" || (state.phase !== "collect" && state.phase !== "boss")) {
       return;
     }
 
+    ensureAudioContext();
     const key = event.key;
     const left = key === "ArrowLeft" || key === "a" || key === "A";
     const right = key === "ArrowRight" || key === "d" || key === "D";
+    const attack = key === " " || key === "Spacebar" || key === "Enter" || key === "z" || key === "Z";
+
+    if (attack && state.phase === "boss") {
+      event.preventDefault();
+      fireBook();
+      return;
+    }
+
     if (!left && !right) {
       return;
     }
@@ -1649,12 +2561,30 @@
   }
 
   function handlePointerDown(event) {
-    if (state.mode !== "playing") {
+    if (state.mode !== "playing" || (state.phase !== "collect" && state.phase !== "boss")) {
       return;
     }
 
+    ensureAudioContext();
     const rect = canvas.getBoundingClientRect();
     const y = event.clientY - rect.top;
+    const isTouchLike = event.pointerType === "touch" || typeof event.pointerType === "undefined";
+    const isMouse = event.pointerType === "mouse";
+
+    if (state.phase === "boss") {
+      if (isMouse) {
+        state.player.lane = pointerToLane(event.clientX);
+        event.preventDefault();
+        fireBook();
+        return;
+      }
+      if (y < rect.height * 0.45) {
+        event.preventDefault();
+        fireBook();
+        return;
+      }
+    }
+
     if (y < rect.height * 0.45) {
       return;
     }
@@ -1667,9 +2597,20 @@
   }
 
   function handlePointerMove(event) {
-    if (!state.input.dragging || state.input.pointerId !== event.pointerId || state.mode !== "playing") {
+    if (state.mode !== "playing" || (state.phase !== "collect" && state.phase !== "boss")) {
       return;
     }
+
+    if (state.phase === "boss" && event.pointerType === "mouse") {
+      state.player.lane = pointerToLane(event.clientX);
+      event.preventDefault();
+      return;
+    }
+
+    if (!state.input.dragging || state.input.pointerId !== event.pointerId) {
+      return;
+    }
+
     state.player.lane = pointerToLane(event.clientX);
     event.preventDefault();
   }
@@ -1698,6 +2639,7 @@
           clientX: touch.clientX,
           clientY: touch.clientY,
           pointerId: touch.identifier,
+          pointerType: "touch",
           preventDefault: () => event.preventDefault(),
         });
       }, { passive: false });
@@ -1710,6 +2652,7 @@
           clientX: touch.clientX,
           clientY: touch.clientY,
           pointerId: touch.identifier,
+          pointerType: "touch",
           preventDefault: () => event.preventDefault(),
         });
       }, { passive: false });
@@ -1753,9 +2696,31 @@
     shareButton.addEventListener("click", () => {
       shareResult();
     });
+    if (bossActionButton) {
+      bossActionButton.addEventListener("click", () => {
+        fireBook();
+      });
+    }
+    if (rankingButton) {
+      rankingButton.addEventListener("click", () => {
+        if (state.mode !== "gameover") {
+          showBanner("Ranking otwiera się po zakończeniu gry.", 1.1);
+          return;
+        }
+        state.leaderboardLevel = clampLevel(state.level);
+        setLeaderboardExpanded(!state.leaderboardExpanded);
+        if (state.leaderboardExpanded) {
+          loadLeaderboard();
+        }
+      });
+    }
     leaderboardForm.addEventListener("submit", submitLeaderboardEntry);
     leaderboardToggle.addEventListener("click", () => {
+      state.leaderboardLevel = clampLevel(state.level);
       setLeaderboardExpanded(!state.leaderboardExpanded);
+      if (state.leaderboardExpanded) {
+        loadLeaderboard();
+      }
     });
   }
 

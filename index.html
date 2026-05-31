@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a2118">
   <meta name="humanum-leaderboard-api" content="https://humanumleaderboard.felix-7d1.workers.dev">
-  <title>Huma-Num</title>
+  <title>KOLEGA HUMANOOB</title>
   <link rel="stylesheet" href="styles.css">
   <script defer src="game.js"></script>
 </head>
 <body>
   <main class="app">
-    <section class="stage-shell" aria-label="HUMA-NUM">
+    <section class="stage-shell" aria-label="KOLEGA HUMANOOB">
       <header class="topbar">
         <div>
           <p class="eyebrow">Retro handheld satire</p>
-          <h1>HUMA-NUM</h1>
+          <h1>KOLEGA HUMANOOB</h1>
         </div>
         <p class="subtitle">Złap dyplomy, zanim uciekną!</p>
       </header>
@@ -39,13 +39,19 @@
         </div>
       </section>
 
+      <div class="level-strip" aria-label="Aktualny poziom">
+        <span class="level-strip-label">Poziom</span>
+        <strong id="hud-level">L1/5</strong>
+      </div>
+
       <section class="game-frame">
-        <canvas id="game-canvas" width="480" height="720" aria-label="Gra HUMA-NUM" role="img"></canvas>
+        <canvas id="game-canvas" width="480" height="720" aria-label="Gra KOLEGA HUMANOOB" role="img"></canvas>
+        <button id="boss-action" class="boss-action" type="button" hidden>Kop / Książka</button>
 
         <div id="overlay-start" class="overlay overlay-visible" aria-live="polite">
           <div class="panel">
             <p class="panel-kicker">MVP / bez backendu</p>
-            <h2>HUMA-NUM</h2>
+            <h2>KOLEGA HUMANOOB</h2>
             <p class="panel-copy">Łap dyplomy, buduj combo i odpalaj absurdalny bonus MBA. Krótka, fikcyjna satyra w stylu starego handhelda LCD.</p>
             <ul class="rules">
               <li>Sterowanie: strzałki lewo/prawo albo A/D.</li>
@@ -67,13 +73,14 @@
               <span id="leaderboard-toggle-hint" class="leaderboard-toggle-hint">Kliknij, aby otworzyć ranking</span>
             </button>
             <div class="button-row">
-              <button id="restart-button" class="primary-button" type="button">Zagraj ponownie</button>
-              <button id="share-button" class="secondary-button" type="button">Udostępnij wynik</button>
+            <button id="restart-button" class="primary-button" type="button">Zagraj ponownie</button>
+            <button id="share-button" class="secondary-button" type="button">Udostępnij wynik</button>
+              <button id="ranking-button" class="secondary-button" type="button">Ranking</button>
             </div>
-            <section id="leaderboard-card" class="leaderboard-card leaderboard-collapsed" aria-label="Tabela wyników tygodnia">
+            <section id="leaderboard-card" class="leaderboard-card leaderboard-collapsed" aria-label="Tabela wyników tygodnia i poziomu">
               <div class="leaderboard-head">
                 <div>
-                  <p class="panel-kicker">Tablica tygodnia</p>
+                  <p class="panel-kicker">Tablica tygodnia / poziomu</p>
                   <h3>Leaderboard</h3>
                 </div>
                 <p id="leaderboard-week" class="leaderboard-week">Tydzień —</p>

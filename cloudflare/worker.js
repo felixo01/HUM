@@ -1,4 +1,5 @@
 const LEADERBOARD_LIMIT = 20;
+const MAX_LEVEL = 5;
 
 export default {
   async fetch(request, env) {
@@ -10,9 +11,11 @@ export default {
 
     if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/leaderboard")) {
       const weekKey = url.searchParams.get("week") || getCurrentIsoWeekKey();
-      const entries = await getLeaderboardEntries(env, weekKey);
+      const level = normalizeLevel(url.searchParams.get("level"));
+      const entries = await getLeaderboardEntries(env, weekKey, level);
       return jsonResponse({
         weekKey,
+        level,
         entries,
       });
     }
@@ -21,6 +24,7 @@ export default {
       const payload = await readJson(request);
       const nickname = normalizeNickname(payload.nickname);
       const score = normalizeScore(payload.score);
+      const level = normalizeLevel(payload.level);
 
       if (!nickname) {
         return jsonResponse({ error: "Nickname is required." }, 400);
@@ -34,9 +38,9 @@ export default {
 
       await env.DB.prepare(
         `
-          INSERT INTO leaderboard (week_key, nickname, score, updated_at)
-          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-          ON CONFLICT(week_key, nickname) DO UPDATE SET
+          INSERT INTO leaderboard (week_key, level, nickname, score, updated_at)
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(week_key, level, nickname) DO UPDATE SET
             score = CASE
               WHEN excluded.score > leaderboard.score THEN excluded.score
               ELSE leaderboard.score
@@ -47,13 +51,14 @@ export default {
             END
         `
       )
-        .bind(weekKey, nickname, score)
+        .bind(weekKey, level, nickname, score)
         .run();
 
-      const entries = await getLeaderboardEntries(env, weekKey);
+      const entries = await getLeaderboardEntries(env, weekKey, level);
       return jsonResponse({
         ok: true,
         weekKey,
+        level,
         entries,
       });
     }
@@ -62,17 +67,17 @@ export default {
   },
 };
 
-async function getLeaderboardEntries(env, weekKey) {
+async function getLeaderboardEntries(env, weekKey, level) {
   const result = await env.DB.prepare(
     `
       SELECT nickname, score, updated_at
       FROM leaderboard
-      WHERE week_key = ?
+      WHERE week_key = ? AND level = ?
       ORDER BY score DESC, updated_at ASC, nickname ASC
       LIMIT ${LEADERBOARD_LIMIT}
     `
   )
-    .bind(weekKey)
+    .bind(weekKey, level)
     .all();
 
   return Array.isArray(result.results) ? result.results : [];
@@ -101,6 +106,14 @@ function normalizeScore(value) {
     return null;
   }
   return score;
+}
+
+function normalizeLevel(value) {
+  const level = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(level)) {
+    return 1;
+  }
+  return Math.max(1, Math.min(MAX_LEVEL, level));
 }
 
 function getCurrentIsoWeekKey(date = new Date()) {
