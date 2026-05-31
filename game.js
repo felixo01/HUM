@@ -1198,8 +1198,8 @@
     const moving = Math.abs(target - x) > 0.8;
     const facing = state.player.facing || 1;
     const step = Math.sin(state.player.runPhase);
-    const legPose = step >= 0 ? 1 : -1;
-    const lean = moving ? Math.round(step * 1.25) * facing : 0;
+    const stride = moving ? Math.round(step * 1) : 0;
+    const lean = moving ? Math.round(step * 0.45) * facing : 0;
     const y0 = y - bodyH / 2 + bob;
 
     drawShadow(x, y0 + bodyH * 0.94, bodyW * 0.38, 11, 0.22);
@@ -1240,33 +1240,29 @@
     px(6, 9, 4, 1, "#e4c09d");
 
     if (moving) {
-      if (legPose > 0) {
-        px(4, 10, 7, 6, PALETTE.navy);
-        px(5, 10, 5, 6, PALETTE.navyMid);
-        px(6, 11, 3, 4, PALETTE.navySoft);
-        px(3, 11, 2, 4, PALETTE.navyMid);
-        px(1, 12, 2, 2, PALETTE.paper);
-        px(1, 13, 1, 1, PALETTE.navyDark);
-        px(2, 11, 1, 1, PALETTE.gold);
-        px(12, 11, 2, 5, PALETTE.navyMid);
-        px(13, 13, 2, 2, "#f0c6a2");
-      } else {
-        px(4, 10, 7, 6, PALETTE.navy);
-        px(5, 10, 5, 6, PALETTE.navyMid);
-        px(6, 11, 3, 4, PALETTE.navySoft);
-        px(12, 11, 2, 4, PALETTE.navyMid);
-        px(13, 13, 2, 2, "#f0c6a2");
-        px(2, 11, 2, 5, PALETTE.navyMid);
-        px(1, 13, 2, 2, "#f0c6a2");
-        px(0, 12, 2, 3, PALETTE.paper);
-        px(0, 13, 1, 1, PALETTE.navyDark);
-        px(1, 11, 1, 1, PALETTE.gold);
-      }
+      px(4, 10, 8, 7, PALETTE.navy);
+      px(5, 10, 6, 7, PALETTE.navyMid);
+      px(6, 11, 4, 5, PALETTE.navySoft);
+      px(6, 10, 4, 1, PALETTE.beigeSoft);
+      px(5, 11, 1, 4, PALETTE.beigeLight);
+      px(10, 11, 1, 4, PALETTE.beigeLight);
 
-      px(4, 15, 2, 2, PALETTE.ink);
-      px(10, 15, 2, 2, PALETTE.ink);
-      px(3, 14, 3, 1, PALETTE.ink);
-      px(9, 14, 4, 1, PALETTE.ink);
+      px(2 + stride, 11, 2, 4, PALETTE.navyMid);
+      px(1 + stride, 13, 2, 2, "#f0c6a2");
+      px(stride, 12, 2, 3, PALETTE.paper);
+      px(stride, 13, 1, 1, PALETTE.navyDark);
+      px(1 + stride, 11, 1, 1, PALETTE.gold);
+
+      px(12 - stride, 11, 2, 4, PALETTE.navyMid);
+      px(13 - stride, 13, 2, 2, "#f0c6a2");
+
+      px(5, 17, 2, 2, PALETTE.navySoft);
+      px(9, 17, 2, 2, PALETTE.navySoft);
+      px(5, 16, 2, 1, PALETTE.beigeLight);
+      px(9, 16, 2, 1, PALETTE.beigeLight);
+
+      px(4, 19, 3, 1, PALETTE.ink);
+      px(9, 19, 4, 1, PALETTE.ink);
     } else {
       px(4, 10, 8, 7, PALETTE.navy);
       px(5, 10, 6, 7, PALETTE.navyMid);
