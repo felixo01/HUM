@@ -141,17 +141,51 @@
       diplomaSpeedJitter: lerp(0.18, 0.12, curve),
       spawnInterval: lerp(0.96, 0.34, curve),
       extraSpawnChance: lerp(0.08, 0.24, curve),
-      pkaDelayMin: lerp(12.5, 7.2, curve),
-      pkaDelayMax: lerp(17, 11.5, curve),
-      pkaSpeed: lerp(340, 610, curve),
+      pkaDelayMin: lerp(14, 8.5, curve),
+      pkaDelayMax: lerp(20, 13, curve),
+      pkaSpeed: lerp(300, 470, curve),
       pkaVerticalBoost: lerp(1.12, 1.36, curve),
-      pkaLead: lerp(12, 34, curve),
     };
   }
 
-  function getLeaderboardApiUrl() {
+  function stripTrailingSlash(value) {
+    return String(value || "").trim().replace(/\/$/, "");
+  }
+
+  function getLeaderboardApiCandidates() {
+    const candidates = [];
+
+    if (window.location.protocol !== "file:") {
+      candidates.push(stripTrailingSlash(new URL("/api", window.location.href).toString()));
+    }
+
     const meta = document.querySelector(`meta[name="${LEADERBOARD_META_NAME}"]`);
-    return meta?.content?.trim() || LEADERBOARD_API_FALLBACK;
+    if (meta?.content?.trim()) {
+      candidates.push(stripTrailingSlash(meta.content));
+    }
+
+    candidates.push(stripTrailingSlash(LEADERBOARD_API_FALLBACK));
+
+    return [...new Set(candidates.filter(Boolean))];
+  }
+
+  async function fetchLeaderboardJson(path, options = {}) {
+    const candidates = getLeaderboardApiCandidates();
+    let lastError = null;
+
+    for (const base of candidates) {
+      try {
+        const response = await fetch(`${base}${path}`, options);
+        if (response.ok) {
+          return response;
+        }
+        lastError = new Error(`HTTP ${response.status} from ${base}`);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error("Leaderboard backend unavailable.");
   }
 
   function getIsoWeekKey(date = new Date()) {
@@ -219,12 +253,11 @@
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
     leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
 
-    const apiUrl = getLeaderboardApiUrl();
     state.leaderboardLoading = true;
     setLeaderboardStatus("Ładowanie tabeli...", true);
 
     try {
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}`, {
+      const response = await fetchLeaderboardJson(`/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -244,7 +277,7 @@
       console.error("Leaderboard load failed:", error);
       state.leaderboardEntries = [];
       renderLeaderboard([]);
-      setLeaderboardStatus("Nie udało się pobrać tabeli. Sprawdź URL Worker'a.", false);
+      setLeaderboardStatus("Nie udało się pobrać tabeli. Sprawdź backend leaderboardu.", false);
     } finally {
       state.leaderboardLoading = false;
     }
@@ -256,7 +289,6 @@
       return;
     }
 
-    const apiUrl = getLeaderboardApiUrl();
     const nickname = sanitizeNickname(leaderboardName.value);
     if (!nickname) {
       setLeaderboardStatus("Wpisz login przed zapisaniem wyniku.", false);
@@ -268,7 +300,7 @@
     setLeaderboardStatus("Zapisywanie wyniku...", true);
 
     try {
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/submit`, {
+      const response = await fetchLeaderboardJson("/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -293,7 +325,7 @@
       setLeaderboardStatus("Wynik zapisany. Tabela odświeżona.", false);
     } catch (error) {
       console.error("Leaderboard submit failed:", error);
-      setLeaderboardStatus("Nie udało się zapisać wyniku. Spróbuj ponownie.", false);
+      setLeaderboardStatus("Nie udało się zapisać wyniku. Sprawdź backend leaderboardu.", false);
     }
   }
 
@@ -476,7 +508,6 @@
       item.w = 76;
       item.h = 34;
       item.targetX = targetX;
-      item.pkaLead = difficulty.pkaLead;
     }
 
     state.items.push(item);
@@ -500,7 +531,7 @@
     showBanner("UWAGA PKA!", 1.2);
     const difficulty = getDifficulty(getRoundProgress());
     spawnItem("pka", {
-      targetX: state.player.x + randomRange(-state.player.width * 0.18, state.player.width * 0.18),
+      targetX: state.player.x + randomRange(-state.player.width * 0.35, state.player.width * 0.35),
       difficulty,
     });
     state.pkaTimer = randomRange(difficulty.pkaDelayMin, difficulty.pkaDelayMax);
@@ -602,13 +633,8 @@
         }
       } else {
         if (item.type === "pka" && typeof item.targetX === "number") {
-          const lead = typeof item.pkaLead === "number" ? item.pkaLead : 18;
-          const chaseTarget = state.player.x + state.player.facing * lead;
-          item.targetX = chaseTarget;
-          item.x += (item.targetX - item.x) * clamp(dt * 24, 0, 0.98);
-          item.vx += clamp((state.player.x - item.x) * 10, -420, 420) * dt;
-          item.vx *= Math.pow(0.975, dt * 60);
-          item.vx = clamp(item.vx, -260, 260);
+          const pkaChase = clamp(dt * 18, 0, 0.95);
+          item.x += (item.targetX - item.x) * pkaChase;
         }
         item.x += item.vx * dt;
         item.y += item.speed * dt;

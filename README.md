@@ -21,9 +21,9 @@ Projekt działa jako czysta statyczna strona internetowa:
 3. W sekcji Pages ustaw źródło na gałąź główną i katalog główny repozytorium.
 4. Zapisz zmiany i poczekaj na publikację.
 
-## Online leaderboard na Cloudflare Workers
+## Online leaderboard na Cloudflare Pages Functions
 
-Leaderboard jest przygotowany jako osobny, prosty backend serverless na Cloudflare Workers + D1.
+Leaderboard jest przygotowany jako prosty backend serverless na Cloudflare Pages Functions + D1.
 
 Co robi:
 
@@ -34,20 +34,21 @@ Co robi:
 
 Pliki backendu znajdziesz w:
 
-- `cloudflare/worker.js`
+- `functions/api/[[path]].js`
 - `cloudflare/migrations/0001_init.sql`
+- `cloudflare/worker.js`
 - `cloudflare/wrangler.toml`
 
 Jak to uruchomić:
 
 1. Zaloguj się do Cloudflare.
 2. Utwórz bazę D1 o nazwie `humanum_leaderboard`.
-3. Wstaw prawdziwy `database_id` do `cloudflare/wrangler.toml`.
+3. Wstaw prawdziwy `database_id` do `cloudflare/wrangler.toml` albo podłącz bazę w ustawieniach Pages.
 4. Wgraj migrację `cloudflare/migrations/0001_init.sql`.
-5. Opublikuj worker.
-6. Skopiuj publiczny adres workera i wklej go do meta taga `humanum-leaderboard-api` w `index.html`.
+5. Opublikuj projekt tak, aby obsługiwał folder `functions`.
+6. Jeśli korzystasz z innego hostingu niż Cloudflare, pozostaw meta tag `humanum-leaderboard-api` z zewnętrznym adresem workera jako fallback.
 
-Frontend sam będzie pobierał i wysyłał wyniki pod ten adres.
+Frontend najpierw spróbuje `\/api` na tym samym hoście, a potem zewnętrzny adres z meta taga.
 
 ## Jak wrzucić na Vercel
 
