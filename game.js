@@ -497,7 +497,10 @@
   function triggerPkaAlert() {
     showBanner("UWAGA PKA!", 1.2);
     const difficulty = getDifficulty(getRoundProgress());
-    spawnItem("pka", { targetX: state.player.x, difficulty });
+    spawnItem("pka", {
+      targetX: state.player.x + randomRange(-state.player.width * 0.35, state.player.width * 0.35),
+      difficulty,
+    });
     state.pkaTimer = randomRange(difficulty.pkaDelayMin, difficulty.pkaDelayMax);
   }
 
@@ -597,7 +600,8 @@
         }
       } else {
         if (item.type === "pka" && typeof item.targetX === "number") {
-          item.x += (item.targetX - item.x) * clamp(dt * 15, 0, 0.95);
+          const pkaChase = clamp(dt * 18, 0, 0.95);
+          item.x += (item.targetX - item.x) * pkaChase;
         }
         item.x += item.vx * dt;
         item.y += item.speed * dt;
