@@ -141,10 +141,11 @@
       diplomaSpeedJitter: lerp(0.18, 0.12, curve),
       spawnInterval: lerp(0.96, 0.34, curve),
       extraSpawnChance: lerp(0.08, 0.24, curve),
-      pkaDelayMin: lerp(14, 8.5, curve),
-      pkaDelayMax: lerp(20, 13, curve),
-      pkaSpeed: lerp(300, 470, curve),
+      pkaDelayMin: lerp(12.5, 7.2, curve),
+      pkaDelayMax: lerp(17, 11.5, curve),
+      pkaSpeed: lerp(340, 610, curve),
       pkaVerticalBoost: lerp(1.12, 1.36, curve),
+      pkaLead: lerp(12, 34, curve),
     };
   }
 
@@ -475,6 +476,7 @@
       item.w = 76;
       item.h = 34;
       item.targetX = targetX;
+      item.pkaLead = difficulty.pkaLead;
     }
 
     state.items.push(item);
@@ -498,7 +500,7 @@
     showBanner("UWAGA PKA!", 1.2);
     const difficulty = getDifficulty(getRoundProgress());
     spawnItem("pka", {
-      targetX: state.player.x + randomRange(-state.player.width * 0.35, state.player.width * 0.35),
+      targetX: state.player.x + randomRange(-state.player.width * 0.18, state.player.width * 0.18),
       difficulty,
     });
     state.pkaTimer = randomRange(difficulty.pkaDelayMin, difficulty.pkaDelayMax);
@@ -600,8 +602,13 @@
         }
       } else {
         if (item.type === "pka" && typeof item.targetX === "number") {
-          const pkaChase = clamp(dt * 18, 0, 0.95);
-          item.x += (item.targetX - item.x) * pkaChase;
+          const lead = typeof item.pkaLead === "number" ? item.pkaLead : 18;
+          const chaseTarget = state.player.x + state.player.facing * lead;
+          item.targetX = chaseTarget;
+          item.x += (item.targetX - item.x) * clamp(dt * 24, 0, 0.98);
+          item.vx += clamp((state.player.x - item.x) * 10, -420, 420) * dt;
+          item.vx *= Math.pow(0.975, dt * 60);
+          item.vx = clamp(item.vx, -260, 260);
         }
         item.x += item.vx * dt;
         item.y += item.speed * dt;
