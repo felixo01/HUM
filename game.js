@@ -709,6 +709,20 @@
       ctx.fillRect(0, y, w, 1);
     }
 
+    const benchRows = [
+      { y: h * 0.52, scale: 0.9 },
+      { y: h * 0.66, scale: 1.02 },
+      { y: h * 0.76, scale: 0.96 },
+    ];
+    const benchXs = [w * 0.1, w * 0.32, w * 0.54, w * 0.76];
+    for (let rowIndex = 0; rowIndex < benchRows.length; rowIndex += 1) {
+      const row = benchRows[rowIndex];
+      for (let i = 0; i < benchXs.length; i += 1) {
+        const x = benchXs[i] + ((rowIndex % 2) * 12 - 6);
+        drawTopDownBench(x, row.y + (i % 2) * 4, row.scale);
+      }
+    }
+
     const laneLeft = w * 0.09;
     const laneSpace = laneSpacing();
     for (let i = 0; i < LANE_COUNT; i += 1) {
@@ -722,6 +736,41 @@
     ctx.fillRect(0, platformY, w, h - platformY);
     ctx.fillStyle = "rgba(255, 166, 88, 0.08)";
     ctx.fillRect(0, platformY + 2, w, 2);
+  }
+
+  function drawTopDownBench(x, y, scale = 1) {
+    const seatW = snap4(42 * scale);
+    const seatH = snap4(16 * scale);
+    const deskW = snap4(44 * scale);
+    const deskH = snap4(10 * scale);
+    const legW = snap4(6 * scale);
+    const x0 = snap4(x - seatW / 2);
+    const y0 = snap4(y - seatH / 2);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+    ctx.fillRect(x0 - 2, y0 - 2, deskW + 4, seatH + deskH + 6);
+
+    ctx.fillStyle = "#1d2d4e";
+    ctx.fillRect(x0, y0, seatW, seatH);
+    ctx.fillStyle = "#2b4370";
+    ctx.fillRect(x0 + 2, y0 + 2, seatW - 4, seatH - 4);
+    ctx.fillStyle = "#c78332";
+    ctx.fillRect(x0 + 4, y0 + 4, seatW - 8, 3);
+    ctx.fillStyle = "#0b0f14";
+    ctx.fillRect(x0 + 6, y0 + 8, seatW - 12, 2);
+
+    const deskY = y0 + seatH + 2;
+    ctx.fillStyle = "#a85a2b";
+    ctx.fillRect(x0 - 1, deskY, deskW, deskH);
+    ctx.fillStyle = "#7c3f1f";
+    ctx.fillRect(x0 + 2, deskY + 2, deskW - 4, deskH - 4);
+    ctx.fillStyle = "#d59143";
+    ctx.fillRect(x0 + 4, deskY + 3, deskW - 8, 2);
+
+    ctx.fillStyle = "#4c2614";
+    ctx.fillRect(x0 + 3, deskY + deskH, legW, snap4(10 * scale));
+    ctx.fillRect(x0 + deskW - legW - 3, deskY + deskH, legW, snap4(10 * scale));
+    ctx.fillRect(x0 + 5, deskY + deskH + 1, deskW - 10, 2);
   }
 
   function drawShadow(x, y, w, h, alpha) {
