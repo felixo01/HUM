@@ -2374,11 +2374,11 @@
     const moving = Math.abs(target - x) > 0.8;
     const facing = state.player.facing || 1;
     const step = Math.sin(state.player.runPhase);
-    const stride = moving ? Math.round(step * 1) : 0;
-    const lean = moving ? Math.round(step * 0.45) * facing : 0;
+    const stride = moving ? Math.round(step * 1.2) : 0;
+    const lean = moving ? Math.round(step * 0.5) * facing : 0;
     const y0 = y - bodyH / 2 + bob;
 
-    drawShadow(x, y0 + bodyH * 0.94, bodyW * 0.38, 11, 0.22);
+    drawShadow(x, y0 + bodyH * 0.96, bodyW * 0.38, 11, 0.22);
 
     const scale = Math.max(4, Math.round(bodyW / 16));
     const spriteW = 16;
@@ -2390,91 +2390,93 @@
       ctx.fillRect(ox + drawX * scale, oy + gy * scale, gw * scale, gh * scale);
     };
 
-    px(2, 0, 12, 1, PALETTE.navyDark);
-    px(1, 1, 14, 1, PALETTE.navyMid);
-    px(1, 2, 13, 1, PALETTE.navyDark);
-    px(2, 3, 11, 1, PALETTE.navyMid);
-    px(3, 4, 9, 1, PALETTE.navyDark);
-    px(0, 1, 1, 1, PALETTE.gold);
-    px(0, 2, 1, 2, PALETTE.gold);
+    // Graduation cap.
+    px(4, 0, 8, 1, PALETTE.navySoft);
+    px(3, 1, 10, 1, PALETTE.navyMid);
+    px(2, 2, 12, 1, PALETTE.navyDark);
+    px(1, 3, 14, 1, PALETTE.navyMid);
+    px(0, 4, 16, 1, PALETTE.navyDark);
+    px(2, 5, 12, 1, PALETTE.navyMid);
+    px(4, 6, 8, 1, PALETTE.navyDark);
+    px(5, 7, 6, 1, PALETTE.navyMid);
+    px(1, 2, 1, 4, PALETTE.gold);
+    px(0, 4, 1, 2, PALETTE.goldSoft);
+    px(1, 6, 2, 1, PALETTE.gold);
 
-    px(2, 4, 2, 2, PALETTE.brown);
-    px(12, 4, 2, 2, PALETTE.brown);
-    px(3, 5, 1, 1, PALETTE.brown);
-    px(12, 5, 1, 1, PALETTE.brown);
+    // Hair and ears.
+    px(3, 6, 10, 1, "#6f431d");
+    px(2, 7, 12, 1, "#7d4f25");
+    px(3, 8, 10, 1, "#8a5a2b");
+    px(2, 9, 1, 2, "#f1c58f");
+    px(13, 9, 1, 2, "#f1c58f");
 
-    px(4, 4, 8, 5, "#f0c6a2");
-    px(4, 5, 8, 4, "#e7b88f");
-    px(5, 4, 6, 1, "#f5d3b2");
-    px(5, 6, 6, 2, "#f7dcbf");
-    px(6, 6, 1, 1, PALETTE.ink);
-    px(9, 6, 1, 1, PALETTE.ink);
-    px(6, 7, 1, 1, "#30415f");
-    px(9, 7, 1, 1, "#30415f");
-    px(7, 8, 2, 1, "#deab84");
+    // Face.
+    px(4, 8, 8, 7, "#f4c792");
+    px(5, 9, 6, 5, "#efb784");
+    px(5, 8, 6, 1, "#ffd6ae");
+    px(5, 12, 6, 1, "#e4b07f");
+    px(6, 13, 4, 1, "#dda173");
+    px(7, 14, 2, 1, "#d58f64");
+    px(6, 10, 1, 2, PALETTE.ink);
+    px(9, 10, 1, 2, PALETTE.ink);
+    px(6, 10, 1, 1, PALETTE.paper);
+    px(9, 10, 1, 1, PALETTE.paper);
+    px(7, 12, 2, 1, "#c97d58");
 
-    px(6, 9, 4, 1, "#e4c09d");
+    // Robe and gold trim.
+    px(3, 14, 10, 7, PALETTE.navyDark);
+    px(4, 14, 8, 7, PALETTE.navy);
+    px(5, 15, 6, 6, PALETTE.navyMid);
+    px(6, 16, 4, 4, PALETTE.navySoft);
+    px(4, 14, 1, 2, PALETTE.goldSoft);
+    px(11, 14, 1, 2, PALETTE.goldSoft);
+    px(5, 15, 1, 4, PALETTE.gold);
+    px(10, 15, 1, 4, PALETTE.gold);
+    px(6, 16, 4, 1, PALETTE.goldSoft);
+    px(6, 18, 4, 1, PALETTE.gold);
+    px(7, 17, 2, 4, "#7a1722");
+    px(7, 16, 2, 1, "#f5f1e8");
+
+    // Sleeves and hands.
+    const armSwing = moving ? -stride : 0;
+    px(1 + armSwing, 16, 2, 4, PALETTE.navyMid);
+    px(13 - armSwing, 16, 2, 4, PALETTE.navyMid);
+    px(0 + armSwing, 19, 2, 2, "#f4c792");
+    px(14 - armSwing, 19, 2, 2, "#f4c792");
+    px(1 + armSwing, 15, 1, 1, PALETTE.gold);
+    px(13 - armSwing, 15, 1, 1, PALETTE.gold);
+
+    // Legs and shoes.
+    const legSwing = moving ? stride : 0;
+    px(5 + legSwing, 20, 2, 3, "#4f596a");
+    px(9 - legSwing, 20, 2, 3, "#4f596a");
+    px(5 + legSwing, 19, 2, 1, PALETTE.beigeLight);
+    px(9 - legSwing, 19, 2, 1, PALETTE.beigeLight);
+    px(4 + legSwing, 22, 3, 2, PALETTE.brown);
+    px(9 - legSwing, 22, 3, 2, PALETTE.brown);
+    px(4 + legSwing, 23, 3, 1, "#5b3414");
+    px(9 - legSwing, 23, 3, 1, "#5b3414");
 
     if (moving) {
-      px(4, 10, 8, 7, PALETTE.navy);
-      px(5, 10, 6, 7, PALETTE.navyMid);
-      px(6, 11, 4, 5, PALETTE.navySoft);
-      px(6, 10, 4, 1, PALETTE.beigeSoft);
-      px(5, 11, 1, 4, PALETTE.beigeLight);
-      px(10, 11, 1, 4, PALETTE.beigeLight);
-
-      px(2 + stride, 11, 2, 4, PALETTE.navyMid);
-      px(1 + stride, 13, 2, 2, "#f0c6a2");
-      px(stride, 12, 2, 3, PALETTE.paper);
-      px(stride, 13, 1, 1, PALETTE.navyDark);
-      px(1 + stride, 11, 1, 1, PALETTE.gold);
-
-      px(12 - stride, 11, 2, 4, PALETTE.navyMid);
-      px(13 - stride, 13, 2, 2, "#f0c6a2");
-
-      px(5, 17, 2, 2, PALETTE.navySoft);
-      px(9, 17, 2, 2, PALETTE.navySoft);
-      px(5, 16, 2, 1, PALETTE.beigeLight);
-      px(9, 16, 2, 1, PALETTE.beigeLight);
-
-      px(4, 19, 3, 1, PALETTE.ink);
-      px(9, 19, 4, 1, PALETTE.ink);
+      px(6, 20, 4, 1, PALETTE.navySoft);
+      px(5, 21, 6, 1, PALETTE.navyDark);
+      px(6, 22, 4, 1, PALETTE.navySoft);
     } else {
-      px(4, 10, 8, 7, PALETTE.navy);
-      px(5, 10, 6, 7, PALETTE.navyMid);
-      px(6, 11, 4, 5, PALETTE.navySoft);
-      px(6, 10, 4, 1, PALETTE.beigeSoft);
-      px(5, 11, 1, 4, PALETTE.beigeLight);
-      px(10, 11, 1, 4, PALETTE.beigeLight);
-
-      px(2, 11, 2, 4, PALETTE.navyMid);
-      px(1, 13, 2, 2, "#f0c6a2");
-      px(0, 12, 2, 3, PALETTE.paper);
-      px(0, 13, 1, 1, PALETTE.navyDark);
-      px(1, 11, 1, 1, PALETTE.gold);
-
-      px(12, 11, 2, 4, PALETTE.navyMid);
-      px(13, 13, 2, 2, "#f0c6a2");
-
-      px(5, 17, 2, 2, PALETTE.navySoft);
-      px(9, 17, 2, 2, PALETTE.navySoft);
-      px(5, 16, 2, 1, PALETTE.beigeLight);
-      px(9, 16, 2, 1, PALETTE.beigeLight);
-
-      px(4, 19, 3, 1, PALETTE.ink);
-      px(9, 19, 4, 1, PALETTE.ink);
+      px(6, 20, 4, 1, PALETTE.navySoft);
+      px(5, 21, 6, 1, PALETTE.navyDark);
+      px(6, 22, 4, 1, PALETTE.navySoft);
     }
 
     if (state.psychologyFx > 0) {
-      px(4, 5, 3, 1, "#1b1b1b");
-      px(9, 5, 3, 1, "#1b1b1b");
-      px(3, 6, 1, 2, "#1b1b1b");
-      px(12, 6, 1, 2, "#1b1b1b");
-      px(4, 6, 8, 1, "#2d2d2d");
-      px(5, 7, 2, 1, "#b3e8d8");
-      px(9, 7, 2, 1, "#b3e8d8");
-      px(7, 18, 2, 2, "#9fe3cf");
-      px(6, 17, 4, 1, "#d7fff2");
+      px(5, 10, 2, 1, "#1b1b1b");
+      px(9, 10, 2, 1, "#1b1b1b");
+      px(4, 11, 1, 2, "#1b1b1b");
+      px(11, 11, 1, 2, "#1b1b1b");
+      px(5, 11, 6, 1, "#2d2d2d");
+      px(6, 12, 1, 1, "#b3e8d8");
+      px(9, 12, 1, 1, "#b3e8d8");
+      px(5, 13, 6, 1, "#d7fff2");
+      px(6, 14, 4, 1, "#9fe3cf");
     }
   }
 
