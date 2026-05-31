@@ -109,6 +109,10 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function lerp(start, end, t) {
+    return start + (end - start) * t;
+  }
+
   function snap4(value) {
     return Math.round(value / 4) * 4;
   }
@@ -119,6 +123,26 @@
 
   function randomLane() {
     return Math.floor(Math.random() * LANE_COUNT);
+  }
+
+  function getRoundProgress() {
+    return clamp(1 - state.timeLeft / DURATION, 0, 1);
+  }
+
+  function getDifficulty(progress) {
+    const curve = Math.pow(progress, 1.35);
+    return {
+      progress,
+      curve,
+      diplomaSpeed: lerp(132, 320, curve),
+      diplomaSpeedJitter: lerp(0.18, 0.12, curve),
+      spawnInterval: lerp(0.96, 0.34, curve),
+      extraSpawnChance: lerp(0.08, 0.24, curve),
+      pkaDelayMin: lerp(14, 8.5, curve),
+      pkaDelayMax: lerp(20, 13, curve),
+      pkaSpeed: lerp(300, 470, curve),
+      pkaVerticalBoost: lerp(1.12, 1.36, curve),
+    };
   }
 
   function getLeaderboardApiUrl() {
@@ -349,7 +373,7 @@
     state.bonusUnlocked = false;
     state.spawnTimer = 0;
     state.specialDrop = null;
-    state.pkaTimer = randomRange(8, 14);
+    state.pkaTimer = randomRange(14, 20);
     state.pkaStorm = 0;
     state.cancelWave = 0;
     state.items.length = 0;
@@ -422,15 +446,15 @@
   function spawnItem(type, options = {}) {
     const lane = randomLane();
     const targetX = typeof options.targetX === "number" ? options.targetX : laneX(lane);
-    const fallBase = 150 + ((DURATION - state.timeLeft) / DURATION) * 160;
-    const speedFactor = 0.9 + Math.random() * 0.28;
+    const difficulty = options.difficulty || getDifficulty(getRoundProgress());
+    const speedFactor = 0.9 + Math.random() * difficulty.diplomaSpeedJitter;
     const item = {
       type,
       lane,
       x: targetX,
       y: -60,
       vx: 0,
-      speed: fallBase * speedFactor,
+      speed: difficulty.diplomaSpeed * speedFactor,
       size: type === "mba" ? 56 : type === "cash" ? 52 : type === "pka" ? 50 : 48,
       w: type === "mba" ? 68 : type === "cash" ? 62 : type === "pka" ? 72 : 46,
       h: type === "mba" ? 48 : type === "cash" ? 42 : type === "pka" ? 32 : 68,
@@ -441,7 +465,7 @@
     if (type === "pka") {
       item.x = targetX;
       item.vx = 0;
-      item.speed = 360 + ((DURATION - state.timeLeft) / DURATION) * 260;
+      item.speed = difficulty.pkaSpeed;
       item.w = 76;
       item.h = 34;
       item.targetX = targetX;
@@ -466,8 +490,9 @@
 
   function triggerPkaAlert() {
     showBanner("UWAGA PKA!", 1.2);
-    spawnItem("pka", { targetX: state.player.x });
-    state.pkaTimer = randomRange(11, 18);
+    const difficulty = getDifficulty(getRoundProgress());
+    spawnItem("pka", { targetX: state.player.x, difficulty });
+    state.pkaTimer = randomRange(difficulty.pkaDelayMin, difficulty.pkaDelayMax);
   }
 
   function triggerPkaCancel() {
@@ -650,19 +675,19 @@
     state.timeLeft = Math.max(0, state.timeLeft - dt);
     updatePlayer(dt);
 
-    const progress = 1 - state.timeLeft / DURATION;
+    const difficulty = getDifficulty(getRoundProgress());
     state.spawnTimer += dt;
     state.pkaTimer -= dt;
     if (state.pkaTimer <= 0) {
       triggerPkaAlert();
     }
 
-    const spawnInterval = clamp(0.82 - progress * 0.46, 0.3, 0.82);
+    const spawnInterval = difficulty.spawnInterval;
     while (state.spawnTimer >= spawnInterval) {
       state.spawnTimer -= spawnInterval;
-      spawnItem("diploma");
-      if (Math.random() < 0.12 + progress * 0.08) {
-        spawnItem("diploma");
+      spawnItem("diploma", { difficulty });
+      if (Math.random() < difficulty.extraSpawnChance) {
+        spawnItem("diploma", { difficulty });
       }
     }
 
