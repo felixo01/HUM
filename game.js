@@ -775,121 +775,206 @@
   }
 
   function drawWarsawSkyline(w, h) {
-    const skyTop = 0;
-    const skyBottom = snap4(h * 0.16);
-    const skyGradient = ctx.createLinearGradient(0, skyTop, 0, skyBottom);
-    skyGradient.addColorStop(0, "#ffcc92");
-    skyGradient.addColorStop(0.42, "#ff9e73");
-    skyGradient.addColorStop(0.72, "#d86677");
-    skyGradient.addColorStop(1, "#5a4678");
+    const skyBottom = snap4(h * 0.18);
+    const cityLine = snap4(h * 0.56);
+    const waterLine = snap4(h * 0.61);
+
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, skyBottom);
+    skyGradient.addColorStop(0, "#91d6ef");
+    skyGradient.addColorStop(0.34, "#7bc8e8");
+    skyGradient.addColorStop(0.68, "#4aa8d3");
+    skyGradient.addColorStop(1, "#1d7cae");
     ctx.fillStyle = skyGradient;
-    ctx.fillRect(0, skyTop, w, skyBottom);
+    ctx.fillRect(0, 0, w, skyBottom);
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.10)";
-    ctx.fillRect(0, skyBottom - 4, w, 2);
-    ctx.fillStyle = "rgba(255, 180, 120, 0.18)";
-    ctx.fillRect(0, skyBottom - 16, w, 2);
-    ctx.fillStyle = "rgba(255, 245, 220, 0.18)";
-    ctx.fillRect(w * 0.18, skyBottom - 28, w * 0.5, 3);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+    for (let y = 0; y < skyBottom; y += 6) {
+      ctx.fillRect(0, y, w, 1);
+    }
+    for (let x = 0; x < w; x += 6) {
+      ctx.fillRect(x, 0, 1, skyBottom);
+    }
 
-    const skylineBase = snap4(h * 0.14);
-    const reflectionTop = snap4(h * 0.08);
-    const reflectionBottom = snap4(h * 0.19);
+    drawPixelCloud(w * 0.11, h * 0.07, 1.1);
+    drawPixelCloud(w * 0.82, h * 0.06, 0.8);
+    drawPixelCloud(w * 0.22, h * 0.12, 0.45);
 
-    ctx.fillStyle = "#2b1d25";
-    ctx.fillRect(0, skylineBase, w, 3);
+    ctx.fillStyle = "#0d4f78";
+    ctx.fillRect(0, skyBottom - 4, w, 4);
+    ctx.fillStyle = "#0a1e35";
+    ctx.fillRect(0, cityLine, w, 3);
 
-    ctx.fillStyle = "rgba(255, 191, 130, 0.12)";
-    ctx.fillRect(0, reflectionTop, w, reflectionBottom - reflectionTop);
-
-    const buildings = [
-      { x: 0.04, w: 0.06, h: 0.06, cap: 0.01, tone: "#21334d" },
-      { x: 0.11, w: 0.05, h: 0.08, cap: 0.012, tone: "#2b4162" },
-      { x: 0.18, w: 0.08, h: 0.1, cap: 0.016, tone: "#203556" },
-      { x: 0.28, w: 0.07, h: 0.07, cap: 0.012, tone: "#1b2b44" },
-      { x: 0.37, w: 0.1, h: 0.13, cap: 0.02, tone: "#2a3658" },
-      { x: 0.48, w: 0.06, h: 0.09, cap: 0.016, tone: "#24385a" },
-      { x: 0.59, w: 0.07, h: 0.11, cap: 0.016, tone: "#304060" },
-      { x: 0.7, w: 0.08, h: 0.08, cap: 0.015, tone: "#25344e" },
-      { x: 0.81, w: 0.07, h: 0.1, cap: 0.014, tone: "#2a3a5a" },
-      { x: 0.9, w: 0.06, h: 0.07, cap: 0.01, tone: "#21334d" },
+    const buildingDefs = [
+      { x: 0.03, w: 0.08, h: 0.16, tone: "#c77b36", light: "#f2c38a", top: "spire" },
+      { x: 0.12, w: 0.07, h: 0.24, tone: "#a9542b", light: "#f6c57f", top: "cross" },
+      { x: 0.2, w: 0.11, h: 0.14, tone: "#8b4828", light: "#f0bf73", top: "roof" },
+      { x: 0.31, w: 0.09, h: 0.34, tone: "#cc6b31", light: "#ffd693", top: "spire" },
+      { x: 0.42, w: 0.1, h: 0.2, tone: "#98512a", light: "#f1c884", top: "flat" },
+      { x: 0.54, w: 0.14, h: 0.42, tone: "#b85d30", light: "#ffd08d", top: "spire" },
+      { x: 0.68, w: 0.1, h: 0.28, tone: "#cf8f3e", light: "#ffe0ae", top: "glass" },
+      { x: 0.8, w: 0.1, h: 0.34, tone: "#9f4b2e", light: "#f7c18f", top: "glass" },
+      { x: 0.91, w: 0.06, h: 0.18, tone: "#7f3b22", light: "#f0ba7c", top: "flat" },
     ];
 
-    for (const building of buildings) {
-      const bw = snap4(w * building.w);
-      const bh = snap4(h * building.h);
-      const bx = snap4(w * building.x);
-      const by = skylineBase - bh;
-      ctx.fillStyle = "#0c111a";
-      ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
-      ctx.fillStyle = building.tone;
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = "rgba(255, 220, 160, 0.22)";
-      ctx.fillRect(bx + 2, by + 2, Math.max(2, bw - 4), 2);
-      ctx.fillStyle = "rgba(255, 160, 120, 0.16)";
-      ctx.fillRect(bx + 4, by + 8, Math.max(2, bw - 8), 1);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-      ctx.fillRect(bx + bw - 3, by, 2, bh);
+    for (const def of buildingDefs) {
+      drawPixelBuilding(w, h, def, cityLine, waterLine);
     }
 
-    const palaceX = snap4(w * 0.5);
-    const palaceBaseW = snap4(w * 0.14);
-    const palaceBaseH = snap4(h * 0.13);
-    const palaceBaseX = palaceX - palaceBaseW / 2;
-    const palaceBaseY = skylineBase - palaceBaseH;
-    const palaceTowerW = snap4(w * 0.032);
-    const palaceTowerH = snap4(h * 0.2);
-    const palaceTowerX = palaceX - palaceTowerW / 2;
-    const palaceTowerY = skyBottom - palaceTowerH + 4;
+    drawPixelBridge(w * 0.13, cityLine, 0.9);
 
-    ctx.fillStyle = "#0c111a";
-    ctx.fillRect(palaceBaseX - 4, palaceBaseY - 2, palaceBaseW + 8, palaceBaseH + 4);
-    ctx.fillRect(palaceTowerX - 4, palaceTowerY - 2, palaceTowerW + 8, palaceTowerH + 4);
+    ctx.fillStyle = "#173b5f";
+    ctx.fillRect(0, cityLine + 1, w, snap4(h * 0.04));
+    ctx.fillStyle = "#0e2b4a";
+    ctx.fillRect(0, waterLine, w, h - waterLine);
 
-    ctx.fillStyle = "#2f4b72";
-    ctx.fillRect(palaceBaseX, palaceBaseY, palaceBaseW, palaceBaseH);
-    ctx.fillStyle = "#3d5d8a";
-    ctx.fillRect(palaceBaseX + 4, palaceBaseY + 4, palaceBaseW - 8, palaceBaseH - 8);
-    ctx.fillStyle = "rgba(255, 220, 165, 0.26)";
-    ctx.fillRect(palaceBaseX + 8, palaceBaseY + 8, palaceBaseW - 16, 2);
+    ctx.fillStyle = "rgba(255, 175, 95, 0.28)";
+    ctx.fillRect(0, waterLine - 8, w, 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.fillRect(0, waterLine - 4, w, 1);
 
-    ctx.fillStyle = "#314f77";
-    ctx.fillRect(palaceTowerX, palaceTowerY + 8, palaceTowerW, palaceTowerH - 8);
-    ctx.fillStyle = "#4a6993";
-    ctx.fillRect(palaceTowerX + 2, palaceTowerY + 12, palaceTowerW - 4, palaceTowerH - 16);
-
-    ctx.fillStyle = "#f2cc8a";
-    ctx.fillRect(palaceTowerX + 2, palaceTowerY + 4, palaceTowerW - 4, 2);
-    ctx.fillRect(palaceTowerX + 2, palaceTowerY + palaceTowerH - 6, palaceTowerW - 4, 2);
-
-    for (let i = 0; i < 4; i += 1) {
-      const notchY = palaceTowerY + 18 + i * 18;
-      ctx.fillStyle = i % 2 === 0 ? "#f2cc8a" : "#ffdfb2";
-      ctx.fillRect(palaceTowerX + 4, notchY, palaceTowerW - 8, 3);
-    }
-
-    ctx.fillStyle = "#f2cc8a";
-    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 10, 4, 12);
-    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 6, palaceTowerY - 4, 12, 2);
-    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 14, 4, 4);
-
-    ctx.fillStyle = "rgba(255, 204, 146, 0.22)";
-    ctx.fillRect(0, skylineBase + 4, w, snap4(h * 0.02));
-
-    const reflectionLines = [
-      { x: 0.14, w: 0.08, c: "rgba(255, 196, 120, 0.34)" },
-      { x: 0.31, w: 0.06, c: "rgba(255, 108, 133, 0.28)" },
-      { x: 0.47, w: 0.1, c: "rgba(167, 120, 255, 0.26)" },
-      { x: 0.62, w: 0.07, c: "rgba(255, 176, 132, 0.28)" },
-      { x: 0.76, w: 0.05, c: "rgba(255, 232, 190, 0.26)" },
+    const reflections = [
+      { x: 0.08, w: 0.06, c: "#5fd0ff" },
+      { x: 0.18, w: 0.05, c: "#ffb26d" },
+      { x: 0.32, w: 0.08, c: "#8a77ff" },
+      { x: 0.46, w: 0.06, c: "#ff8e7a" },
+      { x: 0.59, w: 0.09, c: "#f6d68e" },
+      { x: 0.72, w: 0.05, c: "#73d6ff" },
+      { x: 0.86, w: 0.04, c: "#ffad7a" },
     ];
-    for (const line of reflectionLines) {
-      const rx = snap4(w * line.x);
-      const rw = snap4(w * line.w);
-      ctx.fillStyle = line.c;
-      ctx.fillRect(rx, skylineBase + 2, rw, 2);
-      ctx.fillRect(rx + 4, skylineBase + 6, Math.max(2, rw - 8), 1);
+
+    for (const r of reflections) {
+      const rx = snap4(w * r.x);
+      const rw = snap4(w * r.w);
+      ctx.fillStyle = r.c;
+      ctx.fillRect(rx, waterLine + 2, rw, 2);
+      ctx.fillRect(rx + 2, waterLine + 7, Math.max(2, rw - 4), 1);
+      ctx.fillRect(rx + 4, waterLine + 12, Math.max(2, rw - 8), 1);
     }
+
+    ctx.fillStyle = "#13395d";
+    ctx.fillRect(0, waterLine + 18, w, h - (waterLine + 18));
+    ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+    for (let y = waterLine + 18; y < h; y += 8) {
+      ctx.fillRect(0, y, w, 1);
+    }
+  }
+
+  function drawPixelCloud(x, y, scale = 1) {
+    const px = snap4(x);
+    const py = snap4(y);
+    const s = Math.max(2, Math.round(4 * scale));
+    const blocks = [
+      [0, 2, 4, 2],
+      [2, 0, 5, 3],
+      [7, 1, 3, 2],
+      [3, 3, 8, 2],
+    ];
+
+    ctx.fillStyle = "rgba(255, 244, 214, 0.85)";
+    for (const [bx, by, bw, bh] of blocks) {
+      ctx.fillRect(px + bx * s, py + by * s, bw * s, bh * s);
+    }
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.fillRect(px + 2 * s, py + 2 * s, 8 * s, 2 * s);
+  }
+
+  function drawPixelBuilding(w, h, def, cityLine, waterLine) {
+    const bw = snap4(w * def.w);
+    const bh = snap4(h * def.h);
+    const bx = snap4(w * def.x);
+    const by = cityLine - bh;
+    const bodyColor = def.tone;
+    const lightColor = def.light;
+    const shadowColor = "#09111c";
+    const roofH = Math.max(8, snap4(bh * 0.16));
+    const windowRows = Math.max(2, Math.floor(bh / 18));
+    const windowCols = Math.max(2, Math.floor(bw / 12));
+
+    ctx.fillStyle = shadowColor;
+    ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
+    ctx.fillRect(bx + 2, by + 2, bw + 4, bh + 4);
+
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(bx, by, bw, bh);
+
+    ctx.fillStyle = "#2b4c72";
+    ctx.fillRect(bx + 2, by + 2, Math.max(2, bw - 4), Math.max(2, bh - 4));
+
+    ctx.fillStyle = lightColor;
+    ctx.fillRect(bx + 4, by + 4, Math.max(2, bw - 8), 2);
+
+    for (let row = 0; row < windowRows; row += 1) {
+      for (let col = 0; col < windowCols; col += 1) {
+        const wx = bx + 4 + col * Math.max(4, Math.floor((bw - 8) / windowCols));
+        const wy = by + 10 + row * Math.max(6, Math.floor((bh - 14) / windowRows));
+        ctx.fillStyle = row % 2 === 0 ? "rgba(255, 240, 208, 0.38)" : "rgba(255, 176, 98, 0.28)";
+        ctx.fillRect(wx, wy, 2, 3);
+      }
+    }
+
+    if (def.top === "spire") {
+      ctx.fillStyle = "#1c2f4a";
+      ctx.fillRect(bx + bw / 2 - 2, by - roofH - 10, 4, roofH + 10);
+      ctx.fillRect(bx + bw / 2 - 5, by - 4, 10, 4);
+      ctx.fillStyle = lightColor;
+      ctx.fillRect(bx + bw / 2 - 1, by - roofH - 14, 2, 6);
+    } else if (def.top === "cross") {
+      ctx.fillStyle = "#17263b";
+      ctx.fillRect(bx + bw / 2 - 2, by - roofH - 6, 4, roofH + 6);
+      ctx.fillRect(bx + bw / 2 - 7, by - roofH - 2, 14, 3);
+    } else if (def.top === "roof") {
+      ctx.fillStyle = "#16314f";
+      ctx.fillRect(bx, by - 8, bw, 8);
+      ctx.fillStyle = lightColor;
+      ctx.fillRect(bx + 4, by - 4, bw - 8, 2);
+    } else if (def.top === "glass") {
+      ctx.fillStyle = "#72d6ea";
+      ctx.fillRect(bx + 4, by + 4, bw - 8, bh - 8);
+      ctx.fillStyle = "rgba(255,255,255,0.26)";
+      ctx.fillRect(bx + 6, by + 6, 2, bh - 12);
+      ctx.fillRect(bx + bw - 8, by + 8, 2, bh - 14);
+    } else {
+      ctx.fillStyle = lightColor;
+      ctx.fillRect(bx + 2, by - 4, bw - 4, 4);
+    }
+
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    ctx.fillRect(bx + bw - 4, by, 2, bh);
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.fillRect(bx, by + bh - 4, bw, 4);
+
+    const reflection = Math.max(4, Math.floor((bw / 5)));
+    const reflectionY = waterLine + 4 + Math.floor((bx / w) * 4);
+    ctx.fillStyle = def.light;
+    ctx.fillRect(bx + 2, reflectionY, reflection, 2);
+  }
+
+  function drawPixelBridge(x, cityLine, scale = 1) {
+    const bridgeW = snap4(70 * scale);
+    const bridgeH = snap4(30 * scale);
+    const bx = snap4(x);
+    const by = cityLine - bridgeH + 4;
+
+    ctx.fillStyle = "#08101b";
+    ctx.fillRect(bx - 4, by - 2, bridgeW + 8, bridgeH + 4);
+    ctx.fillStyle = "#1b314d";
+    ctx.fillRect(bx, by, bridgeW, bridgeH);
+    ctx.fillStyle = "#7c5a3c";
+    ctx.fillRect(bx + 2, by + bridgeH - 8, bridgeW - 4, 8);
+    ctx.fillStyle = "#e8c68c";
+    ctx.fillRect(bx + 10, by + 4, 6, bridgeH - 12);
+    ctx.fillRect(bx + bridgeW - 16, by + 4, 6, bridgeH - 12);
+
+    for (let i = 0; i < 7; i += 1) {
+      const archX = bx + 4 + i * 10;
+      ctx.fillStyle = i % 2 === 0 ? "#4a86b9" : "#6bc4ea";
+      ctx.fillRect(archX, by + 10, 6, 2);
+      ctx.fillRect(archX + 1, by + 12, 4, 2);
+    }
+
+    ctx.fillStyle = "#0d1a2a";
+    ctx.fillRect(bx + 2, by + 2, bridgeW - 4, 2);
+    ctx.fillRect(bx + 2, by + bridgeH - 4, bridgeW - 4, 2);
   }
 
   function drawShadow(x, y, w, h, alpha) {
