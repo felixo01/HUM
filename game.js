@@ -6,23 +6,23 @@
   const LANE_COUNT = 5;
   const START_SCORE = 0;
   const PALETTE = {
-    red: "#cc4c25",
-    redDark: "#7c1f14",
-    redWarm: "#f06a3a",
-    beige: "#b89b6d",
-    beigeLight: "#dbc59a",
-    beigeSoft: "#f2dfbf",
-    navy: "#0d213e",
-    navyDark: "#04070d",
-    navyMid: "#163962",
-    navySoft: "#3d6f9f",
-    ink: "#f7efdd",
-    paper: "#fcf7ec",
-    gold: "#de8c28",
-    goldSoft: "#ffd28b",
-    mint: "#8bd28d",
-    cream: "#f6efd6",
-    brown: "#6c3f22",
+    red: "#c00000",
+    redDark: "#8b0000",
+    redWarm: "#b53a2e",
+    beige: "#d9c8a2",
+    beigeLight: "#efe4c7",
+    beigeSoft: "#f8f2de",
+    navy: "#0c4575",
+    navyDark: "#08335a",
+    navyMid: "#1c578a",
+    navySoft: "#4f78a8",
+    ink: "#1a2740",
+    paper: "#f8f4ea",
+    gold: "#e4b84f",
+    goldSoft: "#ffe49a",
+    mint: "#d7e8f1",
+    cream: "#f6ffd6",
+    brown: "#8b4a2f",
   };
 
   const canvas = document.getElementById("game-canvas");
@@ -697,24 +697,6 @@
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(0, snap4(h * 0.6), w, 2);
 
-    const treeY = snap4(h * 0.58);
-    const treeXs = [
-      w * 0.07,
-      w * 0.19,
-      w * 0.31,
-      w * 0.43,
-      w * 0.55,
-      w * 0.67,
-      w * 0.79,
-      w * 0.91,
-    ];
-
-    for (let i = 0; i < treeXs.length; i += 1) {
-      const x = treeXs[i];
-      const sway = Math.sin((performance.now() / 800) + i) * 2;
-      drawPixelTree(x + sway, treeY, 1 + (i % 3) * 0.06);
-    }
-
     ctx.fillStyle = "#4c2614";
     ctx.fillRect(0, snap4(h * 0.81), w, snap4(h * 0.19));
     ctx.fillStyle = "#1a0d08";
@@ -740,52 +722,6 @@
     ctx.fillRect(0, platformY, w, h - platformY);
     ctx.fillStyle = "rgba(255, 166, 88, 0.08)";
     ctx.fillRect(0, platformY + 2, w, 2);
-  }
-
-  function drawPixelTree(x, groundY, scale = 1) {
-    const trunkW = snap4(10 * scale);
-    const trunkH = snap4(40 * scale);
-    const canopyW = snap4(36 * scale);
-    const canopyH = snap4(40 * scale);
-    const x0 = snap4(x - trunkW / 2);
-    const trunkY = snap4(groundY - trunkH);
-    const canopyY = snap4(trunkY - canopyH + 8);
-
-    ctx.fillStyle = "#1a0d08";
-    ctx.fillRect(x0 - 2, trunkY - 2, trunkW + 4, trunkH + 4);
-    ctx.fillStyle = "#d27333";
-    ctx.fillRect(x0, trunkY, trunkW, trunkH);
-    ctx.fillStyle = "#8a3f1e";
-    ctx.fillRect(x0 + 2, trunkY + 4, trunkW - 4, trunkH - 8);
-
-    const leaves = [
-      [0, 0, 3, 4, "#16301d"],
-      [3, 0, 4, 3, "#2d5e31"],
-      [1, 2, 4, 4, "#4a953d"],
-      [5, 1, 3, 4, "#6db746"],
-      [2, 4, 4, 3, "#8cc95b"],
-      [0, 6, 3, 4, "#2c5630"],
-      [4, 5, 4, 4, "#4a953d"],
-      [1, 7, 4, 3, "#75be4f"],
-      [3, 8, 3, 3, "#87d05d"],
-    ];
-
-    for (let row = 0; row < 3; row += 1) {
-      for (let col = 0; col < 3; col += 1) {
-        const ox = x0 - canopyW / 2 + col * 12 * scale;
-        const oy = canopyY + row * 12 * scale;
-        ctx.fillStyle = row === 0 ? "#16301d" : row === 1 ? "#2d5e31" : "#4a953d";
-        ctx.fillRect(ox, oy, 12 * scale, 12 * scale);
-      }
-    }
-
-    for (const [gx, gy, gw, gh, color] of leaves) {
-      ctx.fillStyle = color;
-      ctx.fillRect(x0 - 18 + gx * 4 * scale, canopyY + gy * 4 * scale, gw * 4 * scale, gh * 4 * scale);
-    }
-
-    ctx.fillStyle = "#0a0f12";
-    ctx.fillRect(x0 - 10, canopyY + 2 * scale, canopyW + 20, 2 * scale);
   }
 
   function drawShadow(x, y, w, h, alpha) {
