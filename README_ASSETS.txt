@@ -8,6 +8,9 @@ Expected filenames used by game.js:
 - assets/book.png
 - assets/newsmonth.png
 - assets/renata-boss.png
+- assets/MBA.png
+- assets/PKA.png
+- assets/lapowka.png
 
 Notes:
 - These files are the approved art direction source of truth.

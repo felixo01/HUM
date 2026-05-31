@@ -64,18 +64,21 @@
     book: "assets/book.png",
     newsmonth: "assets/newsmonth.png",
     renataBoss: "assets/renata-boss.png",
+    mba: "assets/MBA.png",
+    pka: "assets/PKA.png",
+    lapowka: "assets/lapowka.png",
   };
   const ASSET_RENDER_CONFIG = {
     playerStudent: {
       key: "playerStudent",
-      scale: 1.0,
+      scale: 1.1,
       offsetY: 0,
       bob: true,
       flipX: true,
     },
     diploma: {
       key: "diploma",
-      scale: 1.0,
+      scale: 1.1,
       offsetY: 0,
       sourceCrop: {
         x: 232,
@@ -96,9 +99,21 @@
     },
     renataBoss: {
       key: "renataBoss",
-      scale: 1.0,
+      scale: 1.25,
       offsetY: 0,
       bob: true,
+    },
+    mba: {
+      key: "mba",
+      scale: 1.46,
+    },
+    pka: {
+      key: "pka",
+      scale: 2.06,
+    },
+    lapowka: {
+      key: "lapowka",
+      scale: 1.4,
     },
   };
 
@@ -1309,9 +1324,9 @@
       y: -60,
       vx: 0,
       speed: difficulty.diplomaSpeed * speedFactor,
-      size: type === "mba" ? 56 : type === "cash" ? 52 : type === "pka" ? 50 : type === "psychologia" ? 54 : 48,
-      w: type === "mba" ? 68 : type === "cash" ? 62 : type === "pka" ? 72 : type === "psychologia" ? 70 : 46,
-      h: type === "mba" ? 48 : type === "cash" ? 42 : type === "pka" ? 32 : type === "psychologia" ? 50 : 68,
+      size: type === "mba" ? 56 : (type === "cash" || type === "bribe") ? 52 : type === "pka" ? 50 : type === "psychologia" ? 54 : 48,
+      w: type === "mba" ? 68 : (type === "cash" || type === "bribe") ? 62 : type === "pka" ? 72 : type === "psychologia" ? 70 : 46,
+      h: type === "mba" ? 48 : (type === "cash" || type === "bribe") ? 42 : type === "pka" ? 32 : type === "psychologia" ? 50 : 68,
       caught: false,
       wobble: Math.random() * Math.PI * 2,
       theme: type === "diploma" ? options.theme || getDiplomaTheme(state.level) : null,
@@ -1377,7 +1392,7 @@
       if (state.combo >= 5 && !state.bonusUnlocked) {
         triggerBonusChain();
       }
-    } else if (item.type === "cash") {
+    } else if (item.type === "cash" || item.type === "bribe") {
       state.score += 40;
       addPopup("+40", item.x, item.y, PALETTE.goldSoft);
       showBanner("Bonus MBA!", 1.15);
@@ -1418,7 +1433,7 @@
         addPopup("MISS", item.x, Math.min(view.height * 0.8, item.y), PALETTE.redWarm);
       }
       syncHud();
-    } else if (item.type === "cash" || item.type === "mba" || item.type === "psychologia") {
+    } else if (item.type === "cash" || item.type === "bribe" || item.type === "mba" || item.type === "psychologia") {
       state.combo = 0;
       state.bonusUnlocked = false;
     }
@@ -2084,17 +2099,30 @@
     const y = item.y;
     const w = item.w;
     const h = item.h;
-    const t = performance.now() / 1000;
-    const flicker = 1 + Math.sin(t * 12 + item.wobble) * 0.12;
-    const flicker2 = 1 + Math.sin(t * 18 + item.wobble * 1.7) * 0.15;
-    const flicker3 = 1 + Math.sin(t * 9 + item.wobble * 0.9 + 1.3) * 0.1;
 
     drawShadow(x, y + h, w, 10, 0.2);
+
+    const t = performance.now() / 1000;
+    const wobble = Math.sin(t * 9 + item.wobble) * 0.04;
+    const shake = state.pkaStorm > 0 ? Math.sin(performance.now() / 40 + item.wobble) * 1.4 : 0;
+    const pulse = 1 + Math.sin(t * 12 + item.wobble) * 0.03;
+
+    if (drawAssetSprite("pka", x, y + h / 2, w, h, {
+      rotate: wobble,
+      offsetX: shake,
+      offsetY: Math.sin(t * 6 + item.wobble) * 0.3,
+      scale: pulse,
+    })) {
+      return;
+    }
 
     const x0 = snap4(x - w / 2);
     const y0 = snap4(y);
     const ww = snap4(w);
     const hh = snap4(h);
+    const flicker = 1 + Math.sin(t * 12 + item.wobble) * 0.12;
+    const flicker2 = 1 + Math.sin(t * 18 + item.wobble * 1.7) * 0.15;
+    const flicker3 = 1 + Math.sin(t * 9 + item.wobble * 0.9 + 1.3) * 0.1;
 
     const flameBaseY = y0 - 8;
     const flameTopY = y0 - 22 - Math.round(4 * flicker2);
@@ -2163,6 +2191,17 @@
     const h = item.h;
 
     drawShadow(x, y + h, w, 10, 0.25);
+
+    const wobble = Math.sin(performance.now() / 140 + item.wobble) * 0.05;
+    const pulse = 1 + Math.sin(performance.now() / 170 + item.wobble * 1.2) * 0.03;
+
+    if (drawAssetSprite("lapowka", x, y + h / 2, w, h, {
+      rotate: wobble,
+      scale: pulse,
+      offsetY: Math.sin(performance.now() / 210 + item.wobble) * 0.2,
+    })) {
+      return;
+    }
 
     const x0 = snap4(x - w / 2);
     const y0 = snap4(y);
@@ -2558,6 +2597,13 @@
 
     drawShadow(x, y + h, w * pulse, 12, 0.25);
 
+    if (drawAssetSprite("mba", x, y + h / 2, w, h, {
+      scale: pulse,
+      offsetY: state.mbaFx > 0 ? Math.sin(performance.now() / 120) * 0.5 : 0,
+    })) {
+      return;
+    }
+
     const x0 = snap4(x - (w * pulse) / 2);
     const y0 = snap4(y);
     const ww = snap4(w * pulse);
@@ -2883,7 +2929,7 @@
     for (const item of state.items) {
       if (item.type === "diploma") {
         drawDiploma(item);
-      } else if (item.type === "cash") {
+      } else if (item.type === "cash" || item.type === "bribe") {
         drawCash(item);
       } else if (item.type === "mba") {
         drawMba(item);

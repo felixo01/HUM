@@ -29,6 +29,9 @@ Wszystkie glowne grafiki gry sa ladowane z folderu `assets/` i to one sa zrodlem
 - `assets/book.png`
 - `assets/newsmonth.png`
 - `assets/renata-boss.png`
+- `assets/MBA.png`
+- `assets/PKA.png`
+- `assets/lapowka.png`
 
 Jesli plik PNG jest dostepny i sie laduje, gra rysuje go w pierwszej kolejnosci. Proceduralny Canvas jest tylko technicznym fallbackiem na wypadek brakujacego assetu.
 

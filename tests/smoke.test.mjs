@@ -23,6 +23,9 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /assets\/book\.png/);
   assert.match(game, /assets\/newsmonth\.png/);
   assert.match(game, /assets\/renata-boss\.png/);
+  assert.match(game, /assets\/MBA\.png/);
+  assert.match(game, /assets\/PKA\.png/);
+  assert.match(game, /assets\/lapowka\.png/);
   assert.match(game, /transitionKind/);
   assert.match(game, /beginBossIntroPhase/);
   assert.match(game, /beginLevelClearPhase/);
@@ -44,6 +47,18 @@ test("approved assets are documented as the source of truth", () => {
   assert.match(readme, /assets\/book\.png/);
   assert.match(readme, /assets\/newsmonth\.png/);
   assert.match(readme, /assets\/renata-boss\.png/);
+  assert.match(readme, /assets\/MBA\.png/);
+  assert.match(readme, /assets\/PKA\.png/);
+  assert.match(readme, /assets\/lapowka\.png/);
+});
+
+test("asset cleanup report documents the technical image handling", () => {
+  const report = readText("docs/ASSET_CLEANUP_REPORT.md");
+  assert.match(report, /player-student\.png/);
+  assert.match(report, /MBA\.png/);
+  assert.match(report, /PKA\.png/);
+  assert.match(report, /lapowka\.png/);
+  assert.match(report, /Finalny rozmiar/);
 });
 
 test("cloudflare backend and migration use per-level ranking", () => {

@@ -1,6 +1,9 @@
-Asset sizes after export:
-- player-student.png: 532x980
+Asset sizes after cleanup:
+- player-student.png: 494x1033
 - diploma.png: 1254x1254
-- book.png: 919x878
+- book.png: 895x854
 - newsmonth.png: 1086x1448
-- renata-boss.png: 1010x1225
+- renata-boss.png: 986x1201
+- MBA.png: 822x1112
+- PKA.png: 920x975
+- lapowka.png: 864x929
