@@ -688,7 +688,7 @@
     finalScore.textContent = String(scoreValue);
     finalBest.textContent = String(levelClear ? scoreValue : state.bestScore);
     restartButton.textContent = levelClear
-      ? (state.level >= MAX_LEVEL ? "Zakończ grę" : "Dalej")
+      ? (state.level >= MAX_LEVEL ? "Zakończ grę" : "Następny poziom")
       : "Zagraj ponownie";
     leaderboardSubmit.textContent = levelClear ? "Zapisz poziom" : "Zapisz wynik";
     leaderboardToggleHint.textContent = state.leaderboardExpanded
