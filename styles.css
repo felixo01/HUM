@@ -256,12 +256,46 @@ body::before {
   margin-top: 16px;
 }
 
+.leaderboard-toggle {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(255, 244, 214, 0.14);
+  background: rgba(8, 17, 30, 0.38);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 214, 0.04);
+}
+
+.leaderboard-toggle-label {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.leaderboard-toggle strong {
+  color: var(--accent);
+}
+
+.leaderboard-toggle-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent-2);
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
+}
+
 .leaderboard-card {
   margin-top: 16px;
   padding: 14px 12px 12px;
   background: rgba(255, 244, 214, 0.07);
   border: 1px solid rgba(255, 244, 214, 0.14);
   text-align: left;
+}
+
+.leaderboard-collapsed {
+  display: none;
 }
 
 .leaderboard-head {
@@ -315,6 +349,9 @@ body::before {
   list-style: none;
   display: grid;
   gap: 6px;
+  max-height: 340px;
+  overflow: auto;
+  scrollbar-width: thin;
 }
 
 .leaderboard-entry {

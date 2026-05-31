@@ -62,12 +62,15 @@
             <p class="panel-kicker">Koniec gry</p>
             <h2 id="final-title">Koniec gry</h2>
             <p class="panel-copy">Wynik: <strong id="final-score">0</strong></p>
-            <p class="panel-copy">Najlepszy wynik: <strong id="final-best">0</strong></p>
+            <button id="leaderboard-toggle" class="leaderboard-toggle" type="button" aria-expanded="false" aria-controls="leaderboard-card">
+              <span class="leaderboard-toggle-label">Najlepszy wynik: <strong id="final-best">0</strong></span>
+              <span id="leaderboard-toggle-hint" class="leaderboard-toggle-hint">Kliknij, aby otworzyć ranking</span>
+            </button>
             <div class="button-row">
               <button id="restart-button" class="primary-button" type="button">Zagraj ponownie</button>
               <button id="share-button" class="secondary-button" type="button">Udostępnij wynik</button>
             </div>
-            <section class="leaderboard-card" aria-label="Tabela wyników tygodnia">
+            <section id="leaderboard-card" class="leaderboard-card leaderboard-collapsed" aria-label="Tabela wyników tygodnia">
               <div class="leaderboard-head">
                 <div>
                   <p class="panel-kicker">Tablica tygodnia</p>

@@ -39,6 +39,9 @@
   const banner = document.getElementById("banner");
   const finalScore = document.getElementById("final-score");
   const finalBest = document.getElementById("final-best");
+  const leaderboardToggle = document.getElementById("leaderboard-toggle");
+  const leaderboardToggleHint = document.getElementById("leaderboard-toggle-hint");
+  const leaderboardCard = document.getElementById("leaderboard-card");
   const shareStatus = document.getElementById("share-status");
   const leaderboardWeek = document.getElementById("leaderboard-week");
   const leaderboardForm = document.getElementById("leaderboard-form");
@@ -82,6 +85,7 @@
     leaderboardWeekKey: getIsoWeekKey(new Date()),
     leaderboardEntries: [],
     leaderboardLoading: false,
+    leaderboardExpanded: false,
     player: {
       lane: Math.floor(LANE_COUNT / 2),
       x: 0,
@@ -217,6 +221,15 @@
     leaderboardName.disabled = loading;
   }
 
+  function setLeaderboardExpanded(expanded) {
+    state.leaderboardExpanded = Boolean(expanded);
+    leaderboardCard.classList.toggle("leaderboard-collapsed", !state.leaderboardExpanded);
+    leaderboardToggle.setAttribute("aria-expanded", String(state.leaderboardExpanded));
+    leaderboardToggleHint.textContent = state.leaderboardExpanded
+      ? "Kliknij, aby ukryć ranking"
+      : "Kliknij, aby otworzyć ranking";
+  }
+
   function readLocalLeaderboardStore() {
     try {
       const raw = localStorage.getItem(LOCAL_LEADERBOARD_KEY);
@@ -250,7 +263,7 @@
         }
         return String(a.nickname || "").localeCompare(String(b.nickname || ""));
       })
-      .slice(0, 10);
+      .slice(0, 20);
   }
 
   function getLocalLeaderboardEntries(weekKey) {
@@ -299,7 +312,7 @@
       return;
     }
 
-    entries.slice(0, 10).forEach((entry, index) => {
+    entries.slice(0, 20).forEach((entry, index) => {
       const item = document.createElement("li");
       item.className = "leaderboard-entry";
 
@@ -512,6 +525,7 @@
     setOverlay(null);
     shareStatus.textContent = "";
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
+    setLeaderboardExpanded(false);
     syncHud();
   }
 
@@ -529,6 +543,7 @@
     finalScore.textContent = String(state.score);
     finalBest.textContent = String(state.bestScore);
     setOverlay("end");
+    setLeaderboardExpanded(false);
     showBanner("Koniec gry", 1.8);
     syncHud();
     loadLeaderboard();
@@ -1739,6 +1754,9 @@
       shareResult();
     });
     leaderboardForm.addEventListener("submit", submitLeaderboardEntry);
+    leaderboardToggle.addEventListener("click", () => {
+      setLeaderboardExpanded(!state.leaderboardExpanded);
+    });
   }
 
   function boot() {

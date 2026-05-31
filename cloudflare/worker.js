@@ -1,4 +1,4 @@
-const LEADERBOARD_LIMIT = 10;
+const LEADERBOARD_LIMIT = 20;
 
 export default {
   async fetch(request, env) {
