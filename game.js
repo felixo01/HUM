@@ -775,26 +775,44 @@
   }
 
   function drawWarsawSkyline(w, h) {
-    const skylineTop = snap4(h * 0.05);
-    const skylineBase = snap4(h * 0.19);
-    const cityColor = "#071327";
-    const cityDark = "#040a14";
-    const cityLight = "#14345d";
-    const towerAccent = "#d9c8a2";
+    const skyTop = 0;
+    const skyBottom = snap4(h * 0.16);
+    const skyGradient = ctx.createLinearGradient(0, skyTop, 0, skyBottom);
+    skyGradient.addColorStop(0, "#ffcc92");
+    skyGradient.addColorStop(0.42, "#ff9e73");
+    skyGradient.addColorStop(0.72, "#d86677");
+    skyGradient.addColorStop(1, "#5a4678");
+    ctx.fillStyle = skyGradient;
+    ctx.fillRect(0, skyTop, w, skyBottom);
 
-    ctx.fillStyle = cityDark;
-    ctx.fillRect(0, skylineBase - 2, w, 4);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.10)";
+    ctx.fillRect(0, skyBottom - 4, w, 2);
+    ctx.fillStyle = "rgba(255, 180, 120, 0.18)";
+    ctx.fillRect(0, skyBottom - 16, w, 2);
+    ctx.fillStyle = "rgba(255, 245, 220, 0.18)";
+    ctx.fillRect(w * 0.18, skyBottom - 28, w * 0.5, 3);
+
+    const skylineBase = snap4(h * 0.14);
+    const reflectionTop = snap4(h * 0.08);
+    const reflectionBottom = snap4(h * 0.19);
+
+    ctx.fillStyle = "#2b1d25";
+    ctx.fillRect(0, skylineBase, w, 3);
+
+    ctx.fillStyle = "rgba(255, 191, 130, 0.12)";
+    ctx.fillRect(0, reflectionTop, w, reflectionBottom - reflectionTop);
 
     const buildings = [
-      { x: 0.03, w: 0.07, h: 0.08 },
-      { x: 0.12, w: 0.09, h: 0.1 },
-      { x: 0.23, w: 0.06, h: 0.07 },
-      { x: 0.31, w: 0.11, h: 0.12 },
-      { x: 0.45, w: 0.08, h: 0.09 },
-      { x: 0.56, w: 0.08, h: 0.1 },
-      { x: 0.67, w: 0.07, h: 0.08 },
-      { x: 0.77, w: 0.1, h: 0.11 },
-      { x: 0.89, w: 0.07, h: 0.09 },
+      { x: 0.04, w: 0.06, h: 0.06, cap: 0.01, tone: "#21334d" },
+      { x: 0.11, w: 0.05, h: 0.08, cap: 0.012, tone: "#2b4162" },
+      { x: 0.18, w: 0.08, h: 0.1, cap: 0.016, tone: "#203556" },
+      { x: 0.28, w: 0.07, h: 0.07, cap: 0.012, tone: "#1b2b44" },
+      { x: 0.37, w: 0.1, h: 0.13, cap: 0.02, tone: "#2a3658" },
+      { x: 0.48, w: 0.06, h: 0.09, cap: 0.016, tone: "#24385a" },
+      { x: 0.59, w: 0.07, h: 0.11, cap: 0.016, tone: "#304060" },
+      { x: 0.7, w: 0.08, h: 0.08, cap: 0.015, tone: "#25344e" },
+      { x: 0.81, w: 0.07, h: 0.1, cap: 0.014, tone: "#2a3a5a" },
+      { x: 0.9, w: 0.06, h: 0.07, cap: 0.01, tone: "#21334d" },
     ];
 
     for (const building of buildings) {
@@ -802,56 +820,76 @@
       const bh = snap4(h * building.h);
       const bx = snap4(w * building.x);
       const by = skylineBase - bh;
-      ctx.fillStyle = cityColor;
+      ctx.fillStyle = "#0c111a";
+      ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
+      ctx.fillStyle = building.tone;
       ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = cityLight;
-      ctx.fillRect(bx + 2, by + 2, Math.max(2, bw - 4), 3);
-      ctx.fillStyle = "rgba(255, 214, 153, 0.12)";
-      ctx.fillRect(bx + 4, by + 8, Math.max(2, bw - 8), 2);
+      ctx.fillStyle = "rgba(255, 220, 160, 0.22)";
+      ctx.fillRect(bx + 2, by + 2, Math.max(2, bw - 4), 2);
+      ctx.fillStyle = "rgba(255, 160, 120, 0.16)";
+      ctx.fillRect(bx + 4, by + 8, Math.max(2, bw - 8), 1);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.fillRect(bx + bw - 3, by, 2, bh);
     }
 
     const palaceX = snap4(w * 0.5);
-    const palaceBaseW = snap4(w * 0.13);
-    const palaceBaseH = snap4(h * 0.16);
+    const palaceBaseW = snap4(w * 0.14);
+    const palaceBaseH = snap4(h * 0.13);
     const palaceBaseX = palaceX - palaceBaseW / 2;
     const palaceBaseY = skylineBase - palaceBaseH;
-    const palaceTowerW = snap4(w * 0.035);
-    const palaceTowerH = snap4(h * 0.22);
+    const palaceTowerW = snap4(w * 0.032);
+    const palaceTowerH = snap4(h * 0.2);
     const palaceTowerX = palaceX - palaceTowerW / 2;
-    const palaceTowerY = skylineTop - 2;
+    const palaceTowerY = skyBottom - palaceTowerH + 4;
 
-    ctx.fillStyle = cityDark;
-    ctx.fillRect(palaceBaseX - 4, palaceBaseY, palaceBaseW + 8, palaceBaseH + 2);
-    ctx.fillRect(palaceTowerX - 4, palaceTowerY, palaceTowerW + 8, palaceTowerH + 2);
+    ctx.fillStyle = "#0c111a";
+    ctx.fillRect(palaceBaseX - 4, palaceBaseY - 2, palaceBaseW + 8, palaceBaseH + 4);
+    ctx.fillRect(palaceTowerX - 4, palaceTowerY - 2, palaceTowerW + 8, palaceTowerH + 4);
 
-    ctx.fillStyle = "#14345d";
+    ctx.fillStyle = "#2f4b72";
     ctx.fillRect(palaceBaseX, palaceBaseY, palaceBaseW, palaceBaseH);
-    ctx.fillStyle = "#1d4a7d";
+    ctx.fillStyle = "#3d5d8a";
     ctx.fillRect(palaceBaseX + 4, palaceBaseY + 4, palaceBaseW - 8, palaceBaseH - 8);
+    ctx.fillStyle = "rgba(255, 220, 165, 0.26)";
+    ctx.fillRect(palaceBaseX + 8, palaceBaseY + 8, palaceBaseW - 16, 2);
 
-    ctx.fillStyle = "#16385f";
-    ctx.fillRect(palaceTowerX, palaceTowerY + 10, palaceTowerW, palaceTowerH - 10);
-    ctx.fillStyle = "#25527f";
-    ctx.fillRect(palaceTowerX + 2, palaceTowerY + 14, palaceTowerW - 4, palaceTowerH - 18);
+    ctx.fillStyle = "#314f77";
+    ctx.fillRect(palaceTowerX, palaceTowerY + 8, palaceTowerW, palaceTowerH - 8);
+    ctx.fillStyle = "#4a6993";
+    ctx.fillRect(palaceTowerX + 2, palaceTowerY + 12, palaceTowerW - 4, palaceTowerH - 16);
 
-    ctx.fillStyle = towerAccent;
+    ctx.fillStyle = "#f2cc8a";
     ctx.fillRect(palaceTowerX + 2, palaceTowerY + 4, palaceTowerW - 4, 2);
     ctx.fillRect(palaceTowerX + 2, palaceTowerY + palaceTowerH - 6, palaceTowerW - 4, 2);
-    ctx.fillRect(palaceBaseX + 6, palaceBaseY + 8, palaceBaseW - 12, 2);
 
     for (let i = 0; i < 4; i += 1) {
       const notchY = palaceTowerY + 18 + i * 18;
-      ctx.fillStyle = i % 2 === 0 ? towerAccent : "#f7efd4";
+      ctx.fillStyle = i % 2 === 0 ? "#f2cc8a" : "#ffdfb2";
       ctx.fillRect(palaceTowerX + 4, notchY, palaceTowerW - 8, 3);
     }
 
-    ctx.fillStyle = towerAccent;
-    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 10, 4, 14);
+    ctx.fillStyle = "#f2cc8a";
+    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 10, 4, 12);
     ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 6, palaceTowerY - 4, 12, 2);
-    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 16, 4, 4);
+    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 14, 4, 4);
 
-    ctx.fillStyle = "rgba(255, 244, 214, 0.18)";
-    ctx.fillRect(0, skylineTop + 4, w, 2);
+    ctx.fillStyle = "rgba(255, 204, 146, 0.22)";
+    ctx.fillRect(0, skylineBase + 4, w, snap4(h * 0.02));
+
+    const reflectionLines = [
+      { x: 0.14, w: 0.08, c: "rgba(255, 196, 120, 0.34)" },
+      { x: 0.31, w: 0.06, c: "rgba(255, 108, 133, 0.28)" },
+      { x: 0.47, w: 0.1, c: "rgba(167, 120, 255, 0.26)" },
+      { x: 0.62, w: 0.07, c: "rgba(255, 176, 132, 0.28)" },
+      { x: 0.76, w: 0.05, c: "rgba(255, 232, 190, 0.26)" },
+    ];
+    for (const line of reflectionLines) {
+      const rx = snap4(w * line.x);
+      const rw = snap4(w * line.w);
+      ctx.fillStyle = line.c;
+      ctx.fillRect(rx, skylineBase + 2, rw, 2);
+      ctx.fillRect(rx + 4, skylineBase + 6, Math.max(2, rw - 8), 1);
+    }
   }
 
   function drawShadow(x, y, w, h, alpha) {
