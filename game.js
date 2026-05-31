@@ -105,15 +105,15 @@
     },
     mba: {
       key: "mba",
-      scale: 1.56,
+      scale: 3.12,
     },
     pka: {
       key: "pka",
-      scale: 2.06,
+      scale: 4.12,
     },
     lapowka: {
       key: "lapowka",
-      scale: 1.5,
+      scale: 3.0,
     },
   };
 
