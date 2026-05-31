@@ -1296,12 +1296,12 @@
   }
 
   async function shareResult() {
-    const text = `Humanum - wynik: ${state.score}. Najlepszy wynik: ${state.bestScore}.`;
+    const text = `HUMA-NUM - wynik: ${state.score}. Najlepszy wynik: ${state.bestScore}.`;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "Humanum",
+          title: "HUMA-NUM",
           text,
         });
         shareStatus.textContent = "Gotowe do udostępnienia.";

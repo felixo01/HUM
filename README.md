@@ -1,6 +1,6 @@
-# Humanum
+# HUMA-NUM
 
-Humanum to prosta, satyryczna gra 2D w stylu retro handhelda LCD. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo i odblokowuje absurdalne bonusy.
+HUMA-NUM to prosta, satyryczna gra 2D w stylu retro handhelda LCD. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo i odblokowuje absurdalne bonusy.
 
 Projekt działa jako czysta statyczna strona internetowa:
 
