@@ -58,11 +58,60 @@
   const restartButton = document.getElementById("restart-button");
   const shareButton = document.getElementById("share-button");
   const AudioCtor = window.AudioContext || window.webkitAudioContext || null;
+  const ART_ASSET_SOURCES = {
+    playerStudent: "assets/player-student.png",
+    diploma: "assets/diploma.png",
+    book: "assets/book.png",
+    newsmonth: "assets/newsmonth.png",
+    renataBoss: "assets/renata-boss.png",
+  };
+  const ASSET_RENDER_CONFIG = {
+    playerStudent: {
+      key: "playerStudent",
+      scale: 1.0,
+      offsetY: 0,
+      bob: true,
+      flipX: true,
+    },
+    diploma: {
+      key: "diploma",
+      scale: 1.0,
+      offsetY: 0,
+      sourceCrop: {
+        x: 232,
+        y: 69,
+        width: 795,
+        height: 1103,
+      },
+    },
+    book: {
+      key: "book",
+      scale: 0.75,
+      rotate: true,
+    },
+    newsmonth: {
+      key: "newsmonth",
+      scale: 0.9,
+      rotate: true,
+    },
+    renataBoss: {
+      key: "renataBoss",
+      scale: 1.0,
+      offsetY: 0,
+      bob: true,
+    },
+  };
 
   const audio = {
     context: null,
     master: null,
     unlocked: false,
+  };
+
+  const assets = {
+    loaded: false,
+    images: Object.create(null),
+    loadingPromise: null,
   };
 
   const view = {
@@ -420,6 +469,163 @@
 
   function clampLevel(level) {
     return clamp(Number(level) || 1, 1, MAX_LEVEL);
+  }
+
+  function loadAssetImage(src) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => resolve({ src, image, loaded: true });
+      image.onerror = () => resolve({ src, image: null, loaded: false });
+      image.src = src;
+    });
+  }
+
+  async function preloadArtAssets() {
+    if (assets.loadingPromise) {
+      return assets.loadingPromise;
+    }
+
+    assets.loadingPromise = Promise.all(
+      Object.entries(ART_ASSET_SOURCES).map(async ([key, src]) => {
+        const result = await loadAssetImage(src);
+        return [key, result.loaded ? result.image : null];
+      })
+    ).then((entries) => {
+      for (const [key, image] of entries) {
+        if (image) {
+          assets.images[key] = image;
+        }
+      }
+      assets.loaded = true;
+      return assets.images;
+    });
+
+    return assets.loadingPromise;
+  }
+
+  function getArtImage(key) {
+    const image = assets.images[key];
+    if (!image || !image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+      return null;
+    }
+    return image;
+  }
+
+  function drawAssetContain(image, centerX, centerY, boxW, boxH, options = {}) {
+    if (!image) {
+      return false;
+    }
+
+    const iw = image.naturalWidth || image.width || 0;
+    const ih = image.naturalHeight || image.height || 0;
+    if (!iw || !ih) {
+      return false;
+    }
+
+    const crop = options.sourceCrop || null;
+    const sx = crop ? Math.max(0, Math.round(crop.x ?? 0)) : 0;
+    const sy = crop ? Math.max(0, Math.round(crop.y ?? 0)) : 0;
+    const sw = crop
+      ? Math.max(1, Math.round(crop.width ?? (iw - sx - Math.round(crop.right ?? 0))))
+      : iw;
+    const sh = crop
+      ? Math.max(1, Math.round(crop.height ?? (ih - sy - Math.round(crop.bottom ?? 0))))
+      : ih;
+    const scale = Math.min(boxW / sw, boxH / sh);
+    const drawW = Math.max(1, Math.round(sw * scale));
+    const drawH = Math.max(1, Math.round(sh * scale));
+    const offsetX = options.offsetX || 0;
+    const offsetY = options.offsetY || 0;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(Math.round(centerX + offsetX), Math.round(centerY + offsetY));
+    if (options.rotate) {
+      ctx.rotate(options.rotate);
+    }
+    if (options.flipX) {
+      ctx.scale(-1, 1);
+    }
+    if (crop) {
+      ctx.drawImage(image, sx, sy, sw, sh, -Math.round(drawW / 2), -Math.round(drawH / 2), Math.round(drawW), Math.round(drawH));
+    } else {
+      ctx.drawImage(image, -Math.round(drawW / 2), -Math.round(drawH / 2), Math.round(drawW), Math.round(drawH));
+    }
+    ctx.restore();
+    return true;
+  }
+
+  function drawDiplomaCancelOverlay(item, x, y, w, h) {
+    if (state.pkaStorm <= 0) {
+      return;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.62;
+    ctx.strokeStyle = PALETTE.red;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.34, y + h * 0.18);
+    ctx.lineTo(x + w * 0.34, y + h * 0.82);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.34, y + h * 0.18);
+    ctx.lineTo(x - w * 0.34, y + h * 0.82);
+    ctx.stroke();
+    ctx.fillStyle = PALETTE.red;
+    ctx.font = "bold 12px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("ANUL.", x, y + h * 0.26);
+    ctx.restore();
+  }
+
+  function drawPsychologyOverlay(x, y, w, h) {
+    ctx.fillStyle = "#1b1b1b";
+    ctx.fillRect(x - w * 0.12, y + h * 0.15, w * 0.08, h * 0.05);
+    ctx.fillRect(x + w * 0.04, y + h * 0.15, w * 0.08, h * 0.05);
+    ctx.fillRect(x - w * 0.16, y + h * 0.22, w * 0.04, h * 0.11);
+    ctx.fillRect(x + w * 0.12, y + h * 0.22, w * 0.04, h * 0.11);
+    ctx.fillStyle = "#2d2d2d";
+    ctx.fillRect(x - w * 0.10, y + h * 0.20, w * 0.20, h * 0.04);
+    ctx.fillStyle = "#b3e8d8";
+    ctx.fillRect(x - w * 0.10, y + h * 0.26, w * 0.04, h * 0.04);
+    ctx.fillRect(x + w * 0.06, y + h * 0.26, w * 0.04, h * 0.04);
+    ctx.fillStyle = "#d7fff2";
+    ctx.fillRect(x - w * 0.08, y + h * 0.62, w * 0.16, h * 0.04);
+    ctx.fillStyle = "#9fe3cf";
+    ctx.fillRect(x - w * 0.05, y + h * 0.58, w * 0.10, h * 0.03);
+  }
+
+  function drawAssetSprite(key, centerX, centerY, boxW, boxH, options = {}) {
+    const image = getArtImage(key);
+    if (!image) {
+      return false;
+    }
+
+    const config = ASSET_RENDER_CONFIG[key] || {};
+    const scale = options.scale ?? config.scale ?? 1;
+    const scaleX = options.scaleX ?? 1;
+    const scaleY = options.scaleY ?? 1;
+    const drawW = Math.max(1, Math.round(boxW * scale * scaleX));
+    const drawH = Math.max(1, Math.round(boxH * scale * scaleY));
+    const offsetX = Math.round((options.offsetX ?? config.offsetX ?? 0) + 0);
+    const offsetY = Math.round((options.offsetY ?? config.offsetY ?? 0) + 0);
+    const rotate = options.rotate ?? config.rotate ?? false;
+    const flipX = options.flipX ?? config.flipX ?? false;
+    const finalRotate = typeof rotate === "number"
+      ? rotate
+      : rotate
+        ? (options.angle ?? 0)
+        : 0;
+
+    return drawAssetContain(image, centerX, centerY, drawW, drawH, {
+      offsetX,
+      offsetY,
+      rotate: finalRotate,
+      flipX,
+      sourceCrop: options.sourceCrop ?? config.sourceCrop ?? null,
+    });
   }
 
   function getLeaderboardScopeKey(weekKey, level) {
@@ -1154,7 +1360,7 @@
     state.pkaStorm = 3;
     state.flash = Math.max(state.flash, 0.28);
     state.shake = Math.max(state.shake, 0.22);
-    showBanner("PKA! ANULOWANO", 1.15);
+    showBanner("ŻADNEJ AKREDYTACJI!", 1.15);
     playSound("pka-cancel");
   }
 
@@ -1846,6 +2052,11 @@
 
     drawShadow(x, y + h, w, 12, 0.24);
 
+    if (drawAssetSprite("diploma", x, y + h / 2, w, h)) {
+      drawDiplomaCancelOverlay(item, x, y, w, h);
+      return;
+    }
+
     const x0 = snap4(x - w / 2);
     const y0 = snap4(y);
     const ww = snap4(w);
@@ -1859,26 +2070,7 @@
     ctx.fillRect(x0 + 10, y0 + 20, ww - 20, 4);
     ctx.fillRect(x0 + 10, y0 + 32, ww - 14, 4);
     ctx.fillRect(x0 + 10, y0 + 44, ww - 24, 4);
-
-    if (state.pkaStorm > 0) {
-      ctx.save();
-      ctx.globalAlpha = 0.62;
-      ctx.strokeStyle = PALETTE.red;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(x - w * 0.34, y + h * 0.18);
-      ctx.lineTo(x + w * 0.34, y + h * 0.82);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x + w * 0.34, y + h * 0.18);
-      ctx.lineTo(x - w * 0.34, y + h * 0.82);
-      ctx.stroke();
-      ctx.fillStyle = PALETTE.red;
-      ctx.font = "bold 12px 'Courier New', monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("ANUL.", x, y + h * 0.26);
-      ctx.restore();
-    }
+    drawDiplomaCancelOverlay(item, x, y, w, h);
 
     ctx.fillStyle = theme.text;
     ctx.font = "bold 10px 'Courier New', monospace";
@@ -2001,6 +2193,12 @@
 
     drawShadow(x, y + h, w, 8, 0.18);
 
+    if (drawAssetSprite("book", x, y + h / 2, w, h, {
+      rotate: Math.sin(performance.now() / 120 + item.life * 4) * 0.08,
+    })) {
+      return;
+    }
+
     const wobble = Math.sin(performance.now() / 120 + item.life * 4) * 0.8;
     const x0 = snap4(x + wobble);
     const y0 = snap4(y);
@@ -2073,6 +2271,12 @@
     const h = item.h;
 
     drawShadow(x, y + h, w, 8, 0.18);
+
+    if (drawAssetSprite("newsmonth", x, y + h / 2, w, h, {
+      rotate: Math.sin((performance.now() / 85) + item.wobble) * 0.05,
+    })) {
+      return;
+    }
 
     const wobble = Math.sin((performance.now() / 85) + item.wobble) * 0.6;
     const x0 = snap4(x - w / 2 + wobble);
@@ -2225,13 +2429,23 @@
     const h = boss.height;
     const facing = state.player.x < boss.x ? -1 : 1;
     const bob = Math.sin(performance.now() / 320) * 2;
+    drawShadow(x, y + h * 0.42, w * 0.4, 12, 0.22);
+
+    if (drawAssetSprite("renataBoss", x, y + h / 2, w, h, {
+      flipX: facing === -1,
+      offsetX: state.shake > 0 ? Math.sin(performance.now() / 40) * 1.5 * state.shake : 0,
+      offsetY: bob,
+      scaleX: state.shake > 0 ? 1.01 : 1,
+      scaleY: state.shake > 0 ? 0.99 : 1,
+    })) {
+      return;
+    }
+
     const scale = Math.max(4, Math.round(w / 18));
     const spriteW = 18;
     const spriteH = 20;
     const ox = Math.round(x - (spriteW * scale) / 2);
     const oy = Math.round(y - (spriteH * scale) / 2 + bob);
-
-    drawShadow(x, y + h * 0.42, w * 0.4, 12, 0.22);
 
     const px = (gx, gy, gw, gh, color) => {
       const drawX = facing === 1 ? gx : spriteW - gx - gw;
@@ -2269,7 +2483,6 @@
     px(2, 11, 3, 1, "#2c4666");
     px(13, 11, 3, 1, "#2c4666");
 
-    // Red newspaper in hand.
     const paperSide = facing === 1 ? 0 : 1;
     const paperX = paperSide === 0 ? 1 : 13;
     px(paperX, 11, 4, 5, "#a41a2a");
@@ -2389,6 +2602,19 @@
       ctx.fillStyle = color;
       ctx.fillRect(ox + drawX * scale, oy + gy * scale, gw * scale, gh * scale);
     };
+
+    if (drawAssetSprite("playerStudent", x, y0 + bodyH / 2, bodyW, bodyH, {
+      flipX: facing === -1,
+      offsetX: lean * scale,
+      offsetY: bob,
+      scaleX: moving ? 1.02 : 1,
+      scaleY: moving ? 0.98 : 1,
+    })) {
+      if (state.psychologyFx > 0) {
+        drawPsychologyOverlay(x, y0, bodyW, bodyH);
+      }
+      return;
+    }
 
     // Graduation cap.
     px(4, 0, 8, 1, PALETTE.navySoft);
@@ -2937,6 +3163,7 @@
   }
 
   function boot() {
+    void preloadArtAssets();
     resizeCanvas();
     syncHud();
     renderLeaderboard([]);

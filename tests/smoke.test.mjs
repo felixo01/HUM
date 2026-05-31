@@ -14,6 +14,15 @@ test("core UI and labels are present", () => {
 
 test("game loop contains boss intro, per-level leaderboard and audio hooks", () => {
   const game = readText("game.js");
+  assert.match(game, /ART_ASSET_SOURCES/);
+  assert.match(game, /ASSET_RENDER_CONFIG/);
+  assert.match(game, /imageSmoothingEnabled = false/);
+  assert.match(game, /sourceCrop/);
+  assert.match(game, /assets\/player-student\.png/);
+  assert.match(game, /assets\/diploma\.png/);
+  assert.match(game, /assets\/book\.png/);
+  assert.match(game, /assets\/newsmonth\.png/);
+  assert.match(game, /assets\/renata-boss\.png/);
   assert.match(game, /transitionKind/);
   assert.match(game, /beginBossIntroPhase/);
   assert.match(game, /beginLevelClearPhase/);
@@ -24,6 +33,17 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /getLeaderboardScopeKey/);
   assert.match(game, /NEWSMONTH/);
   assert.match(game, /Zapisz poziom/);
+  assert.match(game, /ŻADNEJ AKREDYTACJI!/);
+});
+
+test("approved assets are documented as the source of truth", () => {
+  const readme = readText("README.md");
+  assert.match(readme, /Zatwierdzone assety/);
+  assert.match(readme, /assets\/player-student\.png/);
+  assert.match(readme, /assets\/diploma\.png/);
+  assert.match(readme, /assets\/book\.png/);
+  assert.match(readme, /assets\/newsmonth\.png/);
+  assert.match(readme, /assets\/renata-boss\.png/);
 });
 
 test("cloudflare backend and migration use per-level ranking", () => {

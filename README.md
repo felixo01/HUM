@@ -1,41 +1,53 @@
 # KOLEGUM HUMANOOB
 
-KOLEGUM HUMANOOB to prosta satyryczna gra 2D w stylu retro handhelda. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo, a po każdym poziomie mierzy się z bossową Renatą.
+KOLEGUM HUMANOOB to prosta satyryczna gra 2D w stylu retro handhelda. Gracz steruje malym studentem w todze i czapce, lapie spadajace dyplomy, buduje combo, a po kazdym poziomie mierzy sie z bossowa Renata.
 
-Projekt działa jako czysta statyczna strona:
+Projekt dziala jako czysta statyczna strona:
 
-- bez npm i bez ciężkich zależności
+- bez npm i bez ciezkich zaleznosci
 - bez backendu do samej gry
-- bez zewnętrznych grafik
+- bez generowania nowych grafik w kodzie
 - gotowy do wrzucenia na GitHub Pages albo Vercel
 
 ## Co jest w grze
 
-- 5 poziomów z rosnącą trudnością
-- plansza przejściowa przed bossem z odliczaniem 3, 2, 1
-- boss Renata po każdym poziomie
-- prosty system bossowych ataków z gazetą `NEWSMONTH`
-- bonusy `Łapówka`, `MBA` i `Psychologia`
-- proste dźwięki retro przez Web Audio API
+- 5 poziomow z rosnaca trudnoscia
+- plansza przejsciowa przed bossem z odliczaniem 3, 2, 1
+- boss Renata po kazdym poziomie
+- prosty system bossowych atakow z gazeta `NEWSMONTH`
+- bonusy `LAPOWKA`, `MBA` i `Psychologia`
+- proste dzwieki retro przez Web Audio API
 - ranking tygodniowy per poziom
-- fallback lokalny w `localStorage`, jeśli backend chwilowo nie działa
+- fallback lokalny w `localStorage`, jesli backend chwilowo nie dziala
+
+## Zatwierdzone assety
+
+Wszystkie glowne grafiki gry sa ladowane z folderu `assets/` i to one sa zrodlem prawdy dla wygladu sprite'ow:
+
+- `assets/player-student.png`
+- `assets/diploma.png`
+- `assets/book.png`
+- `assets/newsmonth.png`
+- `assets/renata-boss.png`
+
+Jesli plik PNG jest dostepny i sie laduje, gra rysuje go w pierwszej kolejnosci. Proceduralny Canvas jest tylko technicznym fallbackiem na wypadek brakujacego assetu.
 
 ## Uruchomienie lokalne
 
-1. Otwórz `index.html` bezpośrednio w przeglądarce.
-2. Jeśli wolisz lokalny serwer, użyj dowolnego prostego static servera.
+1. Otworz `index.html` bezposrednio w przegladarce.
+2. Jesli wolisz lokalny serwer, uzyj dowolnego prostego static servera.
 
 ## Sterowanie
 
-- desktop: strzałki lewo/prawo oraz `A`/`D`
-- mobile: przeciąganie palcem po dolnej części ekranu
-- w walce z bossem: klik lub przycisk akcji wykonuje rzut książką / atak
+- desktop: strzalki lewo/prawo oraz `A`/`D`
+- mobile: przeciaganie palcem po dolnej czesci ekranu
+- w walce z bossem: klik lub przycisk akcji wykonuje rzut ksiazka / atak
 
 ## GitHub Pages
 
-Repo ma workflow w `.github/workflows/pages.yml`, który:
+Repo ma workflow w `.github/workflows/pages.yml`, ktory:
 
-1. uruchamia testy składni i testy dymne,
+1. uruchamia testy skladni i testy dymne,
 2. kopiuje tylko statyczne pliki gry do `_site`,
 3. publikuje wynik jako GitHub Pages.
 
@@ -48,9 +60,9 @@ Wymagane pliki do publikacji:
 
 ## Cloudflare leaderboard
 
-Ranking działa jako backend serverless na Cloudflare Pages Functions lub Worker + D1.
+Ranking dziala jako backend serverless na Cloudflare Pages Functions albo Worker + D1.
 
-Model danych jest per tydzień i per poziom:
+Model danych jest per tydzien i per poziom:
 
 - `week_key`
 - `level`
@@ -58,7 +70,7 @@ Model danych jest per tydzień i per poziom:
 - `score`
 - `updated_at`
 
-W repo są pliki:
+W repo sa pliki:
 
 - `functions/api/[[path]].js`
 - `cloudflare/worker.js`
@@ -71,7 +83,7 @@ Binding bazy D1:
 - nazwa bindingu: `DB`
 - nazwa bazy: `humanum_leaderboard`
 
-Frontend najpierw próbuje `\/api` na tym samym hoście, potem meta tag `humanum-leaderboard-api`, a na końcu publiczny fallback worker.
+Frontend najpierw probuje `\/api` na tym samym hoscie, potem meta tag `humanum-leaderboard-api`, a na koncu publiczny fallback worker.
 
 ## Testy
 
@@ -84,18 +96,18 @@ node --check "functions/api/[[path]].js"
 node --test tests/smoke.test.mjs
 ```
 
-Na Windows PowerShell najbezpieczniej uruchamiać właśnie komendy `node --...`. Jeśli wolisz `npm test`, użyj `npm.cmd test`.
+Na Windows PowerShell najbezpieczniej uruchamiac wlasnie komendy `node --...`. Jesli wolisz `npm test`, uzyj `npm.cmd test`.
 
 ## Plan dalszego rozwoju
 
-- dopracowanie balansu poziomów 2-5
+- dopracowanie balansu poziomow 2-5
 - kolejne bossy po Renacie
-- lepsze efekty dźwiękowe i animacje
+- lepsze efekty dzwiekowe i animacje
 - dodatkowe statystyki rankingu
-- możliwy tryb challenge / endless
+- mozliwy tryb challenge / endless
 
 ## Dokumentacja
 
-- [Spec poziomów i bossów](docs/LEVELS_BOSSES_SPEC.md)
+- [Spec poziomow i bossow](docs/LEVELS_BOSSES_SPEC.md)
 - [Lista otwartych decyzji](docs/OPEN_ITEMS.md)
 - [Audyt stanu projektu](docs/AUDIT.md)
