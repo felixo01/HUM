@@ -578,10 +578,6 @@
     ctx.fillRect(x0 + 10, y0 + 20, ww - 20, 4);
     ctx.fillRect(x0 + 10, y0 + 32, ww - 14, 4);
     ctx.fillRect(x0 + 10, y0 + 44, ww - 24, 4);
-    ctx.fillStyle = PALETTE.redWarm;
-    ctx.fillRect(x0 + ww - 24, y0 + hh - 18, 16, 8);
-    ctx.fillStyle = PALETTE.redDark;
-    ctx.fillRect(x0 + ww - 18, y0 + hh - 24, 4, 20);
 
     if (state.pkaStorm > 0) {
       ctx.save();
