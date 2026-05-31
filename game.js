@@ -710,19 +710,8 @@
       ctx.fillRect(0, y, w, 1);
     }
 
-    const benchRows = [
-      { y: h * 0.52, scale: 0.9 },
-      { y: h * 0.66, scale: 1.02 },
-      { y: h * 0.76, scale: 0.96 },
-    ];
-    const benchXs = [w * 0.1, w * 0.32, w * 0.54, w * 0.76];
-    for (let rowIndex = 0; rowIndex < benchRows.length; rowIndex += 1) {
-      const row = benchRows[rowIndex];
-      for (let i = 0; i < benchXs.length; i += 1) {
-        const x = benchXs[i] + ((rowIndex % 2) * 12 - 6);
-        drawTopDownBench(x, row.y + (i % 2) * 4, row.scale);
-      }
-    }
+    drawCityStreet(w, h, h * 0.62, 0.92);
+    drawCityStreet(w, h, h * 0.73, 0.82);
 
     const laneLeft = w * 0.09;
     const laneSpace = laneSpacing();
@@ -739,39 +728,65 @@
     ctx.fillRect(0, platformY + 2, w, 2);
   }
 
-  function drawTopDownBench(x, y, scale = 1) {
-    const seatW = snap4(42 * scale);
-    const seatH = snap4(16 * scale);
-    const deskW = snap4(44 * scale);
-    const deskH = snap4(10 * scale);
-    const legW = snap4(6 * scale);
-    const x0 = snap4(x - seatW / 2);
-    const y0 = snap4(y - seatH / 2);
+  function drawCityStreet(w, h, y, density = 1) {
+    const roadY = snap4(h * y);
+    const roadH = snap4(h * 0.05);
+    ctx.fillStyle = "rgba(10, 16, 23, 0.75)";
+    ctx.fillRect(0, roadY, w, roadH);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.fillRect(0, roadY + 2, w, 1);
+    ctx.fillStyle = "rgba(255, 190, 120, 0.08)";
+    ctx.fillRect(0, roadY + roadH - 2, w, 1);
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
-    ctx.fillRect(x0 - 2, y0 - 2, deskW + 4, seatH + deskH + 6);
+    const carPositions = [
+      { x: 0.08, lane: 0, tint: "#33485d" },
+      { x: 0.23, lane: 1, tint: "#495b6d" },
+      { x: 0.4, lane: 0, tint: "#5b6572" },
+      { x: 0.56, lane: 1, tint: "#546a7a" },
+      { x: 0.72, lane: 0, tint: "#444f5d" },
+      { x: 0.87, lane: 1, tint: "#5a545f" },
+    ];
 
-    ctx.fillStyle = "#0d1526";
-    ctx.fillRect(x0, y0, seatW, seatH);
-    ctx.fillStyle = "#17243c";
-    ctx.fillRect(x0 + 2, y0 + 2, seatW - 4, seatH - 4);
-    ctx.fillStyle = "#5a4522";
-    ctx.fillRect(x0 + 4, y0 + 4, seatW - 8, 3);
-    ctx.fillStyle = "#05070a";
-    ctx.fillRect(x0 + 6, y0 + 8, seatW - 12, 2);
+    for (let i = 0; i < carPositions.length; i += 1) {
+      const car = carPositions[i];
+      drawPixelCar(w * car.x, roadY + roadH * (0.28 + car.lane * 0.22), 0.75 * density, car.tint, i % 2 === 0);
+    }
+  }
 
-    const deskY = y0 + seatH + 2;
-    ctx.fillStyle = "#4a2a18";
-    ctx.fillRect(x0 - 1, deskY, deskW, deskH);
-    ctx.fillStyle = "#2d1a10";
-    ctx.fillRect(x0 + 2, deskY + 2, deskW - 4, deskH - 4);
-    ctx.fillStyle = "#6a4a2a";
-    ctx.fillRect(x0 + 4, deskY + 3, deskW - 8, 2);
+  function drawPixelCar(x, y, scale = 1, bodyColor = "#4a5561", facingLeft = false) {
+    const s = Math.max(2, Math.round(4 * scale));
+    const carW = 12 * s;
+    const carH = 6 * s;
+    const x0 = snap4(x - carW / 2);
+    const y0 = snap4(y - carH / 2);
 
-    ctx.fillStyle = "#1b0f0a";
-    ctx.fillRect(x0 + 3, deskY + deskH, legW, snap4(10 * scale));
-    ctx.fillRect(x0 + deskW - legW - 3, deskY + deskH, legW, snap4(10 * scale));
-    ctx.fillRect(x0 + 5, deskY + deskH + 1, deskW - 10, 2);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+    ctx.fillRect(x0 - 2, y0 + carH - 1, carW + 4, 3);
+
+    ctx.fillStyle = "#1a1d22";
+    ctx.fillRect(x0, y0 + 1, carW, carH - 1);
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(x0 + 1, y0, carW - 2, carH - 2);
+    ctx.fillStyle = facingLeft ? "#6d7a86" : "#7a8792";
+    ctx.fillRect(x0 + 2, y0 + 1, carW - 4, 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
+    ctx.fillRect(x0 + 3, y0 + 2, 4, 1);
+
+    const wheelY = y0 + carH - 1;
+    ctx.fillStyle = "#0b0e12";
+    ctx.fillRect(x0 + 2, wheelY, 2, 2);
+    ctx.fillRect(x0 + carW - 4, wheelY, 2, 2);
+    ctx.fillStyle = "#2e353e";
+    ctx.fillRect(x0 + 3, wheelY - 1, 1, 1);
+    ctx.fillRect(x0 + carW - 3, wheelY - 1, 1, 1);
+
+    if (facingLeft) {
+      ctx.fillStyle = "rgba(255, 220, 130, 0.22)";
+      ctx.fillRect(x0 - 1, y0 + 2, 1, 2);
+    } else {
+      ctx.fillStyle = "rgba(255, 220, 130, 0.22)";
+      ctx.fillRect(x0 + carW, y0 + 2, 1, 2);
+    }
   }
 
   function drawWarsawSkyline(w, h) {
