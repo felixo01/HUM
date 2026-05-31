@@ -66,6 +66,13 @@ Frontend najpierw spróbuje `\/api` na tym samym hoście, a potem zewnętrzny ad
 - lokalne osiągnięcia zapisane w przeglądarce
 - delikatna animacja tła i menu startowego
 
+## Dokumentacja rozwoju
+
+W repo są też pliki planujące kolejne kroki projektu:
+
+- [docs/LEVELS_BOSSES_SPEC.md](docs/LEVELS_BOSSES_SPEC.md)
+- [docs/OPEN_ITEMS.md](docs/OPEN_ITEMS.md)
+
 ## Sterowanie
 
 - desktop: strzałki lewo/prawo oraz A/D
