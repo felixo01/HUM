@@ -1,6 +1,7 @@
 (() => {
   const STORAGE_KEY = "humanum-best-score";
   const LEADERBOARD_META_NAME = "humanum-leaderboard-api";
+  const LEADERBOARD_API_FALLBACK = "https://humanumleaderboard.felix-7d1.workers.dev";
   const DURATION = 60;
   const LANE_COUNT = 5;
   const START_SCORE = 0;
@@ -122,7 +123,7 @@
 
   function getLeaderboardApiUrl() {
     const meta = document.querySelector(`meta[name="${LEADERBOARD_META_NAME}"]`);
-    return meta?.content?.trim() || "";
+    return meta?.content?.trim() || LEADERBOARD_API_FALLBACK;
   }
 
   function getIsoWeekKey(date = new Date()) {
@@ -191,12 +192,6 @@
     leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
 
     const apiUrl = getLeaderboardApiUrl();
-    if (!apiUrl) {
-      setLeaderboardStatus("Wklej adres Worker'a w meta tagu, żeby tabela działała online.", false);
-      renderLeaderboard([]);
-      return;
-    }
-
     state.leaderboardLoading = true;
     setLeaderboardStatus("Ładowanie tabeli...", true);
 
@@ -238,11 +233,6 @@
     if (!nickname) {
       setLeaderboardStatus("Wpisz login przed zapisaniem wyniku.", false);
       leaderboardName.focus();
-      return;
-    }
-
-    if (!apiUrl) {
-      setLeaderboardStatus("Najpierw wklej adres Worker'a w meta tagu.", false);
       return;
     }
 
