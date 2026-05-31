@@ -920,8 +920,8 @@
       y: state.player.y - state.player.height * 0.4,
       vx: randomRange(-18, 18),
       vy: -420 - state.level * 18,
-      w: 36,
-      h: 22,
+      w: 40,
+      h: 28,
       life: 1.4,
     });
     addPopup("KSIĄŻKA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
@@ -2001,22 +2001,69 @@
 
     drawShadow(x, y + h, w, 8, 0.18);
 
-    const x0 = snap4(x - w / 2);
-    const y0 = snap4(y - h / 2);
-    const ww = snap4(w);
-    const hh = snap4(h);
-    ctx.fillStyle = "#6d3f23";
-    ctx.fillRect(x0, y0, ww, hh);
-    ctx.fillStyle = "#e6d7ae";
-    ctx.fillRect(x0 + 3, y0 + 2, ww - 6, hh - 4);
-    ctx.fillStyle = "#1f3352";
-    ctx.fillRect(x0 + ww - 8, y0 + 2, 4, hh - 4);
-    ctx.fillStyle = "#c79e52";
-    ctx.fillRect(x0 + 5, y0 + 5, ww - 14, 3);
-    ctx.fillStyle = "#6d3f23";
-    ctx.font = "bold 7px 'Courier New', monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("KSIAŻKA", x, y + 2);
+    const wobble = Math.sin(performance.now() / 120 + item.life * 4) * 0.8;
+    const x0 = snap4(x + wobble);
+    const y0 = snap4(y);
+    const coverW = snap4(Math.max(48, w * 1.2));
+    const coverH = snap4(Math.max(32, h * 1.15));
+
+    ctx.save();
+    ctx.translate(x0, y0);
+    ctx.rotate(-0.48);
+    ctx.translate(-coverW / 2, -coverH / 2);
+
+    ctx.fillStyle = "#12070f";
+    ctx.fillRect(1, 1, coverW, coverH);
+
+    ctx.fillStyle = "#4a1127";
+    ctx.fillRect(3, 3, coverW - 8, coverH - 6);
+
+    ctx.fillStyle = "#661a38";
+    ctx.fillRect(5, 4, coverW - 12, coverH - 8);
+
+    ctx.fillStyle = "#7a2540";
+    ctx.fillRect(8, 6, coverW - 18, coverH - 12);
+
+    ctx.fillStyle = "#3a0d1f";
+    ctx.fillRect(3, 4, Math.max(10, Math.round(coverW * 0.22)), coverH - 8);
+
+    ctx.fillStyle = "#5a1731";
+    ctx.fillRect(8, 7, Math.max(7, Math.round(coverW * 0.08)), coverH - 14);
+
+    ctx.fillStyle = "#d6bf8b";
+    ctx.fillRect(coverW - 18, 8, 12, coverH - 14);
+    ctx.fillStyle = "#ead7ae";
+    ctx.fillRect(coverW - 14, 10, 9, coverH - 18);
+
+    ctx.fillStyle = "#c7924a";
+    ctx.fillRect(7, 6, coverW - 22, 2);
+    ctx.fillRect(7, coverH - 8, coverW - 20, 2);
+    ctx.fillRect(6, 8, 2, coverH - 16);
+    ctx.fillRect(coverW - 18, 8, 2, coverH - 16);
+
+    ctx.fillStyle = "#e2b56b";
+    ctx.fillRect(11, 10, 4, 4);
+    ctx.fillRect(coverW - 22, 10, 4, 4);
+    ctx.fillRect(11, coverH - 14, 4, 4);
+    ctx.fillRect(coverW - 22, coverH - 14, 4, 4);
+
+    ctx.fillStyle = "#d9a75c";
+    ctx.fillRect(Math.round(coverW * 0.44), Math.round(coverH * 0.38), 10, 10);
+    ctx.fillStyle = "#7b3e1d";
+    ctx.fillRect(Math.round(coverW * 0.47), Math.round(coverH * 0.41), 4, 4);
+
+    ctx.fillStyle = "#b78a4a";
+    ctx.fillRect(coverW - 15, 15, 8, 2);
+    ctx.fillRect(coverW - 15, 19, 8, 2);
+    ctx.fillRect(coverW - 15, 23, 8, 2);
+    ctx.fillRect(coverW - 15, 27, 8, 2);
+
+    ctx.fillStyle = "#f1e0ba";
+    ctx.fillRect(coverW - 18, coverH - 10, 13, 4);
+    ctx.fillStyle = "#886345";
+    ctx.fillRect(4, coverH - 5, coverW - 24, 2);
+
+    ctx.restore();
   }
 
   function drawNewsmonthShot(item) {
@@ -2032,54 +2079,143 @@
     const y0 = snap4(y - h / 2);
     const ww = snap4(w);
     const hh = snap4(h);
-    ctx.fillStyle = "#8d0a1d";
+    ctx.fillStyle = "#070707";
     ctx.fillRect(x0 - 1, y0 - 1, ww + 2, hh + 2);
-    ctx.fillStyle = "#d81d2c";
+    ctx.fillStyle = "#d31822";
     ctx.fillRect(x0, y0, ww, hh);
 
-    const mastheadH = Math.max(20, Math.round(hh * 0.24));
-    const bodyTop = y0 + mastheadH;
-    const bodyH = hh - mastheadH;
+    const topBandH = Math.max(18, Math.round(hh * 0.22));
+    const mastheadH = Math.max(24, Math.round(hh * 0.28));
+    const bodyTop = y0 + topBandH + mastheadH;
+    const bodyH = hh - topBandH - mastheadH;
+    const bodyBottom = y0 + hh;
+    const footerH = Math.max(16, Math.round(bodyH * 0.28));
+    const photoTop = bodyTop;
+    const photoH = bodyH - footerH;
 
-    ctx.fillStyle = "#efefef";
-    ctx.fillRect(x0 + 2, y0 + 2, ww - 4, mastheadH - 4);
-    ctx.fillStyle = "#d81d2c";
-    ctx.fillRect(x0 + 3, y0 + 3, ww - 6, mastheadH - 6);
-    ctx.strokeStyle = "#fff1dd";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x0 + 3, y0 + 3, ww - 6, mastheadH - 6);
+    ctx.fillStyle = "#090909";
+    ctx.fillRect(x0 + 2, y0 + 2, ww - 4, topBandH - 4);
 
-    ctx.save();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 13px 'Courier New', monospace";
+    const barcodeW = Math.max(10, Math.round(ww * 0.18));
+    const articleAreaW = ww - 8 - barcodeW;
+    const columnW = Math.max(10, Math.floor((articleAreaW - 8) / 3));
+    const columnY = y0 + 4;
+    const columnX1 = x0 + 4;
+    const columnX2 = columnX1 + columnW + 4;
+    const columnX3 = columnX2 + columnW + 4;
+    const tinyFont = Math.max(4, Math.round(ww * 0.095));
+
+    ctx.fillStyle = "#f2f2f2";
+    ctx.font = `bold ${tinyFont}px 'Courier New', monospace`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    const drawHeadlineColumn = (startX, lines) => {
+      lines.forEach((line, index) => {
+        ctx.fillText(line, startX, columnY + index * (tinyFont + 1));
+      });
+    };
+
+    drawHeadlineColumn(columnX1, ["KONSOLE ZA ZDROWIE?", "LECZENIE XP CORAZ", "POPULARNIEJSZE"]);
+    drawHeadlineColumn(columnX2, ["MIASTO-BLOK 12", "MIESZKAŃCY CHCĄ", "REALNYCH NPC"]);
+    drawHeadlineColumn(columnX3, ["HAKERZY W RADZIE?", "KTO PISAŁ UCHWAŁY", "TO NIKT NIE WIE"]);
+
+    ctx.fillStyle = "#d61b27";
+    ctx.fillRect(columnX2 - 3, y0 + 3, 1, topBandH - 6);
+    ctx.fillRect(columnX3 - 3, y0 + 3, 1, topBandH - 6);
+    ctx.fillRect(columnX3 + columnW + 1, y0 + 3, 1, topBandH - 6);
+
+    const barcodeX = x0 + ww - barcodeW - 4;
+    ctx.fillStyle = "#f4f4f4";
+    ctx.fillRect(barcodeX, y0 + 2, barcodeW, topBandH - 4);
+    ctx.fillStyle = "#111";
+    for (let i = 0; i < barcodeW; i += 2) {
+      const barH = topBandH - 6 - (i % 4 === 0 ? 1 : 0);
+      ctx.fillRect(barcodeX + i, y0 + 3, 1, barH);
+    }
+    ctx.fillStyle = "#111";
+    ctx.font = `bold ${Math.max(5, Math.round(ww * 0.08))}px 'Courier New', monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("8421 07", barcodeX + barcodeW / 2, y0 + topBandH - 2);
+
+    ctx.fillStyle = "#d31822";
+    ctx.fillRect(x0 + 2, y0 + topBandH, ww - 4, mastheadH);
+    ctx.fillStyle = "#fffbf2";
+    ctx.fillRect(x0 + 2, y0 + topBandH + 1, ww - 4, mastheadH - 2);
+    ctx.fillStyle = "#d31822";
+    ctx.fillRect(x0 + 2, y0 + topBandH + 2, ww - 4, mastheadH - 4);
+
+    ctx.fillStyle = "#fffdf8";
+    ctx.font = `bold ${Math.max(17, Math.round(ww * 0.32))}px 'Courier New', monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("NEWSMONTH", x, y0 + mastheadH / 2 - 1);
-    ctx.restore();
+    ctx.fillText("NEWSMONTH", x, y0 + topBandH + mastheadH * 0.58);
 
-    ctx.fillStyle = "#f5f1e8";
-    ctx.fillRect(x0 + 3, bodyTop + 3, ww - 6, bodyH - 6);
-    ctx.fillStyle = "#111114";
-    ctx.fillRect(x0 + 7, bodyTop + 9, ww - 14, bodyH - 18);
+    ctx.fillStyle = "#fff8ec";
+    ctx.font = `bold ${Math.max(4, Math.round(ww * 0.07))}px 'Courier New', monospace`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("NR 07 (427) + 26.05.2087  *  CENA: 5 KREDYTÓW", x0 + 4, y0 + topBandH + 2);
+    ctx.textAlign = "right";
+    ctx.fillText("TYGODNIK NIEZALEŻNY", x0 + ww - 4, y0 + topBandH + 2);
 
-    ctx.fillStyle = "#ffffff";
-    const silhouetteX = x0 + Math.round(ww * 0.42);
-    const silhouetteY = bodyTop + Math.round(bodyH * 0.12);
-    const figureW = Math.max(4, Math.round(ww * 0.16));
-    const figureH = Math.max(20, Math.round(bodyH * 0.48));
-    ctx.fillRect(silhouetteX, silhouetteY, figureW, figureH);
-    ctx.fillRect(silhouetteX - 4, silhouetteY + 6, figureW + 8, 4);
-    ctx.fillRect(silhouetteX - 2, silhouetteY + figureH, figureW + 4, 4);
-    ctx.fillRect(silhouetteX + 1, silhouetteY + 4, 2, figureH - 6);
+    ctx.fillStyle = "#ececec";
+    ctx.fillRect(x0 + 2, photoTop, ww - 4, photoH);
+    ctx.fillStyle = "#bdbdbd";
+    ctx.fillRect(x0 + 4, photoTop + 1, ww - 8, photoH - 2);
 
-    ctx.fillStyle = "#f6f2ea";
-    ctx.fillRect(x0 + 11, bodyTop + 14, ww - 22, 3);
-    ctx.fillRect(x0 + 11, bodyTop + 22, ww - 28, 2);
-    ctx.fillRect(x0 + 11, bodyTop + 30, ww - 18, 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(x0 + 11, bodyTop + bodyH - 12, ww - 22, 4);
-    ctx.fillStyle = "#d81d2c";
-    ctx.fillRect(x0 + 11, bodyTop + bodyH - 8, ww - 26, 2);
+    ctx.fillStyle = "#0f0f10";
+    ctx.fillRect(x0, photoTop, 4, photoH);
+    ctx.fillRect(x0 + ww - 4, photoTop, 4, photoH);
+
+    ctx.fillStyle = "#f4f4f4";
+    for (let i = 0; i < 6; i += 1) {
+      const stripeX = x0 + 8 + i * Math.max(4, Math.round(ww * 0.1));
+      ctx.fillRect(stripeX, photoTop + 2, 2, photoH - 4);
+    }
+
+    ctx.fillStyle = "#d6d6d6";
+    ctx.fillRect(x0 + 6, photoTop + 6, ww - 12, Math.max(6, Math.round(photoH * 0.18)));
+    ctx.fillStyle = "#f7f7f7";
+    ctx.fillRect(x0 + 8, photoTop + 8, ww - 16, Math.max(4, Math.round(photoH * 0.12)));
+
+    const figureX = x0 + Math.round(ww * 0.52);
+    const figureTop = photoTop + Math.round(photoH * 0.14);
+    ctx.fillStyle = "#5e5e5e";
+    ctx.fillRect(figureX, figureTop, 4, 10);
+    ctx.fillRect(figureX - 2, figureTop + 8, 8, 14);
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(figureX - 4, figureTop + 20, 12, 10);
+    ctx.fillRect(figureX - 2, figureTop + 30, 8, 16);
+    ctx.fillRect(figureX - 4, figureTop + 44, 4, 16);
+    ctx.fillRect(figureX + 4, figureTop + 44, 4, 16);
+    ctx.fillStyle = "#8f8f8f";
+    ctx.fillRect(figureX - 1, figureTop + 10, 2, 8);
+    ctx.fillRect(figureX - 3, figureTop + 12, 6, 2);
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(figureX - 4, figureTop + 40, 12, 4);
+
+    ctx.fillStyle = "#222";
+    ctx.fillRect(x0 + 10, photoTop + photoH - 8, ww - 20, 4);
+    ctx.fillStyle = "#666";
+    ctx.fillRect(x0 + 10, photoTop + photoH - 14, ww - 20, 2);
+
+    ctx.fillStyle = "#111";
+    ctx.fillRect(x0 + 4, bodyBottom - footerH - 2, ww - 8, footerH);
+    ctx.fillStyle = "#f5f2e7";
+    ctx.font = `bold ${Math.max(5, Math.round(ww * 0.08))}px 'Courier New', monospace`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("SEZON WYBORCZY 2087:", x0 + 6, bodyBottom - footerH);
+    ctx.fillText("KTO KUPI TWOJE GŁOSY?", x0 + 6, bodyBottom - footerH + 6);
+    ctx.fillStyle = "#d31822";
+    ctx.fillRect(x0 + 4, bodyBottom - footerH - 4, 8, 2);
+    ctx.fillRect(x0 + 4, bodyBottom - footerH + 14, 4, 4);
+    ctx.fillStyle = "#f5f2e7";
+    ctx.font = `bold ${Math.max(4, Math.round(ww * 0.065))}px 'Courier New', monospace`;
+    ctx.fillText("PODATKI W GÓRĘ, NASTROJE W DÓŁ", x0 + 12, bodyBottom - footerH + 15);
+    ctx.fillText("PORADNIK: JAK PRZETRWAĆ AKTUALIZACJĘ?", x0 + 12, bodyBottom - footerH + 21);
   }
 
   function drawRenataBoss(boss) {
