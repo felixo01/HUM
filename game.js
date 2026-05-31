@@ -751,24 +751,24 @@
     ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
     ctx.fillRect(x0 - 2, y0 - 2, deskW + 4, seatH + deskH + 6);
 
-    ctx.fillStyle = "#1d2d4e";
+    ctx.fillStyle = "#0d1526";
     ctx.fillRect(x0, y0, seatW, seatH);
-    ctx.fillStyle = "#2b4370";
+    ctx.fillStyle = "#17243c";
     ctx.fillRect(x0 + 2, y0 + 2, seatW - 4, seatH - 4);
-    ctx.fillStyle = "#c78332";
+    ctx.fillStyle = "#5a4522";
     ctx.fillRect(x0 + 4, y0 + 4, seatW - 8, 3);
-    ctx.fillStyle = "#0b0f14";
+    ctx.fillStyle = "#05070a";
     ctx.fillRect(x0 + 6, y0 + 8, seatW - 12, 2);
 
     const deskY = y0 + seatH + 2;
-    ctx.fillStyle = "#a85a2b";
+    ctx.fillStyle = "#4a2a18";
     ctx.fillRect(x0 - 1, deskY, deskW, deskH);
-    ctx.fillStyle = "#7c3f1f";
+    ctx.fillStyle = "#2d1a10";
     ctx.fillRect(x0 + 2, deskY + 2, deskW - 4, deskH - 4);
-    ctx.fillStyle = "#d59143";
+    ctx.fillStyle = "#6a4a2a";
     ctx.fillRect(x0 + 4, deskY + 3, deskW - 8, 2);
 
-    ctx.fillStyle = "#4c2614";
+    ctx.fillStyle = "#1b0f0a";
     ctx.fillRect(x0 + 3, deskY + deskH, legW, snap4(10 * scale));
     ctx.fillRect(x0 + deskW - legW - 3, deskY + deskH, legW, snap4(10 * scale));
     ctx.fillRect(x0 + 5, deskY + deskH + 1, deskW - 10, 2);
