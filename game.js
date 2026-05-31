@@ -77,6 +77,7 @@
     bannerText: "",
     pausedReason: "",
     lastFrame: 0,
+    psychologyFx: 0,
     leaderboardWeekKey: getIsoWeekKey(new Date()),
     leaderboardEntries: [],
     leaderboardLoading: false,
@@ -87,6 +88,8 @@
       width: 60,
       height: 88,
       bob: 0,
+      facing: 1,
+      runPhase: 0,
     },
     input: {
       dragging: false,
@@ -376,6 +379,7 @@
     state.pkaTimer = randomRange(14, 20);
     state.pkaStorm = 0;
     state.cancelWave = 0;
+    state.psychologyFx = 0;
     state.items.length = 0;
     state.popups.length = 0;
     state.flash = 0;
@@ -387,6 +391,8 @@
     state.player.lane = Math.floor(LANE_COUNT / 2);
     state.player.x = laneX(state.player.lane);
     state.player.bob = 0;
+    state.player.facing = 1;
+    state.player.runPhase = 0;
     state.lastFrame = performance.now();
     hideBanner();
     setOverlay(null);
@@ -455,9 +461,9 @@
       y: -60,
       vx: 0,
       speed: difficulty.diplomaSpeed * speedFactor,
-      size: type === "mba" ? 56 : type === "cash" ? 52 : type === "pka" ? 50 : 48,
-      w: type === "mba" ? 68 : type === "cash" ? 62 : type === "pka" ? 72 : 46,
-      h: type === "mba" ? 48 : type === "cash" ? 42 : type === "pka" ? 32 : 68,
+      size: type === "mba" ? 56 : type === "cash" ? 52 : type === "pka" ? 50 : type === "psychologia" ? 54 : 48,
+      w: type === "mba" ? 68 : type === "cash" ? 62 : type === "pka" ? 72 : type === "psychologia" ? 70 : 46,
+      h: type === "mba" ? 48 : type === "cash" ? 42 : type === "pka" ? 32 : type === "psychologia" ? 50 : 68,
       caught: false,
       wobble: Math.random() * Math.PI * 2,
     };
@@ -526,6 +532,10 @@
       state.mbaFx = 1.35;
       state.speedBoost = 5;
       showBanner("MBA!", 1.2);
+    } else if (item.type === "psychologia") {
+      addPopup("OKULARNIK", item.x, item.y, PALETTE.mint);
+      state.psychologyFx = 3;
+      showBanner("PSYCHOLOGIA!", 1.15);
     } else if (item.type === "pka") {
       addPopup("ANUL.", item.x, item.y, PALETTE.goldSoft);
       triggerPkaCancel();
@@ -546,7 +556,7 @@
         addPopup("MISS", item.x, Math.min(view.height * 0.8, item.y), PALETTE.redWarm);
       }
       syncHud();
-    } else if (item.type === "cash" || item.type === "mba") {
+    } else if (item.type === "cash" || item.type === "mba" || item.type === "psychologia") {
       state.combo = 0;
       state.bonusUnlocked = false;
     }
@@ -558,6 +568,7 @@
     const playerW = state.player.width;
     const playerH = state.player.height;
     const pkaActive = state.pkaStorm > 0;
+    const psychologyActive = state.psychologyFx > 0;
 
     for (let i = state.items.length - 1; i >= 0; i -= 1) {
       const item = state.items[i];
@@ -571,6 +582,13 @@
           item.vx = clamp(item.vx, -150, 150);
           item.x += item.vx * dt;
           item.y -= upwardSpeed * dt;
+        } else if (psychologyActive) {
+          const dx = playerX - item.x;
+          item.vx += clamp(dx * 9, -220, 220) * dt;
+          item.vx *= Math.pow(0.955, dt * 60);
+          item.vx = clamp(item.vx, -190, 190);
+          item.x += item.vx * dt;
+          item.y += item.speed * 0.68 * dt;
         } else {
           item.vx *= Math.pow(0.93, dt * 60);
           item.vx = clamp(item.vx, -120, 120);
@@ -645,6 +663,14 @@
   function updatePlayer(dt) {
     const target = laneX(state.player.lane);
     const moveMultiplier = state.speedBoost > 0 ? 3 : 1;
+    const dx = target - state.player.x;
+    const moving = Math.abs(dx) > 0.8;
+    if (moving) {
+      state.player.facing = dx < 0 ? -1 : 1;
+      state.player.runPhase += dt * (state.speedBoost > 0 ? 14 : 11);
+    } else {
+      state.player.runPhase += dt * 3.5;
+    }
     state.player.x += (target - state.player.x) * clamp(dt * 10 * moveMultiplier, 0, 0.85);
     state.player.bob += dt * 4.2;
   }
@@ -656,6 +682,7 @@
     state.speedBoost = Math.max(0, state.speedBoost - dt);
     state.pkaStorm = Math.max(0, state.pkaStorm - dt);
     state.cancelWave = Math.max(0, state.cancelWave - dt);
+    state.psychologyFx = Math.max(0, state.psychologyFx - dt);
 
     if (state.bannerTimer > 0) {
       state.bannerTimer -= dt;
@@ -688,6 +715,9 @@
       spawnItem("diploma", { difficulty });
       if (Math.random() < difficulty.extraSpawnChance) {
         spawnItem("diploma", { difficulty });
+      }
+      if (Math.random() < lerp(0.03, 0.07, difficulty.curve)) {
+        spawnItem("psychologia", { difficulty });
       }
     }
 
@@ -1164,17 +1194,24 @@
     const bob = Math.sin(state.player.bob) * 2;
     const bodyW = state.player.width;
     const bodyH = state.player.height;
+    const target = laneX(state.player.lane);
+    const moving = Math.abs(target - x) > 0.8;
+    const facing = state.player.facing || 1;
+    const step = Math.sin(state.player.runPhase);
+    const legPose = step >= 0 ? 1 : -1;
+    const lean = moving ? Math.round(step * 1.25) * facing : 0;
     const y0 = y - bodyH / 2 + bob;
 
     drawShadow(x, y0 + bodyH * 0.94, bodyW * 0.38, 11, 0.22);
 
     const scale = Math.max(4, Math.round(bodyW / 16));
     const spriteW = 16;
-    const ox = Math.round(x - (spriteW * scale) / 2);
+    const ox = Math.round(x - (spriteW * scale) / 2) + lean * scale;
     const oy = Math.round(y0);
     const px = (gx, gy, gw, gh, color) => {
+      const drawX = facing === 1 ? gx : spriteW - gx - gw;
       ctx.fillStyle = color;
-      ctx.fillRect(ox + gx * scale, oy + gy * scale, gw * scale, gh * scale);
+      ctx.fillRect(ox + drawX * scale, oy + gy * scale, gw * scale, gh * scale);
     };
 
     px(2, 0, 12, 1, PALETTE.navyDark);
@@ -1202,29 +1239,104 @@
 
     px(6, 9, 4, 1, "#e4c09d");
 
-    px(4, 10, 8, 7, PALETTE.navy);
-    px(5, 10, 6, 7, PALETTE.navyMid);
-    px(6, 11, 4, 5, PALETTE.navySoft);
-    px(6, 10, 4, 1, PALETTE.beigeSoft);
-    px(5, 11, 1, 4, PALETTE.beigeLight);
-    px(10, 11, 1, 4, PALETTE.beigeLight);
+    if (moving) {
+      if (legPose > 0) {
+        px(4, 10, 7, 6, PALETTE.navy);
+        px(5, 10, 5, 6, PALETTE.navyMid);
+        px(6, 11, 3, 4, PALETTE.navySoft);
+        px(3, 11, 2, 4, PALETTE.navyMid);
+        px(1, 12, 2, 2, PALETTE.paper);
+        px(1, 13, 1, 1, PALETTE.navyDark);
+        px(2, 11, 1, 1, PALETTE.gold);
+        px(12, 11, 2, 5, PALETTE.navyMid);
+        px(13, 13, 2, 2, "#f0c6a2");
+      } else {
+        px(4, 10, 7, 6, PALETTE.navy);
+        px(5, 10, 5, 6, PALETTE.navyMid);
+        px(6, 11, 3, 4, PALETTE.navySoft);
+        px(12, 11, 2, 4, PALETTE.navyMid);
+        px(13, 13, 2, 2, "#f0c6a2");
+        px(2, 11, 2, 5, PALETTE.navyMid);
+        px(1, 13, 2, 2, "#f0c6a2");
+        px(0, 12, 2, 3, PALETTE.paper);
+        px(0, 13, 1, 1, PALETTE.navyDark);
+        px(1, 11, 1, 1, PALETTE.gold);
+      }
 
-    px(2, 11, 2, 4, PALETTE.navyMid);
-    px(1, 13, 2, 2, "#f0c6a2");
-    px(0, 12, 2, 3, PALETTE.paper);
-    px(0, 13, 1, 1, PALETTE.navyDark);
-    px(1, 11, 1, 1, PALETTE.gold);
+      px(4, 15, 2, 2, PALETTE.ink);
+      px(10, 15, 2, 2, PALETTE.ink);
+      px(3, 14, 3, 1, PALETTE.ink);
+      px(9, 14, 4, 1, PALETTE.ink);
+    } else {
+      px(4, 10, 8, 7, PALETTE.navy);
+      px(5, 10, 6, 7, PALETTE.navyMid);
+      px(6, 11, 4, 5, PALETTE.navySoft);
+      px(6, 10, 4, 1, PALETTE.beigeSoft);
+      px(5, 11, 1, 4, PALETTE.beigeLight);
+      px(10, 11, 1, 4, PALETTE.beigeLight);
 
-    px(12, 11, 2, 4, PALETTE.navyMid);
-    px(13, 13, 2, 2, "#f0c6a2");
+      px(2, 11, 2, 4, PALETTE.navyMid);
+      px(1, 13, 2, 2, "#f0c6a2");
+      px(0, 12, 2, 3, PALETTE.paper);
+      px(0, 13, 1, 1, PALETTE.navyDark);
+      px(1, 11, 1, 1, PALETTE.gold);
 
-    px(5, 17, 2, 2, PALETTE.navySoft);
-    px(9, 17, 2, 2, PALETTE.navySoft);
-    px(5, 16, 2, 1, PALETTE.beigeLight);
-    px(9, 16, 2, 1, PALETTE.beigeLight);
+      px(12, 11, 2, 4, PALETTE.navyMid);
+      px(13, 13, 2, 2, "#f0c6a2");
 
-    px(4, 19, 3, 1, PALETTE.ink);
-    px(9, 19, 4, 1, PALETTE.ink);
+      px(5, 17, 2, 2, PALETTE.navySoft);
+      px(9, 17, 2, 2, PALETTE.navySoft);
+      px(5, 16, 2, 1, PALETTE.beigeLight);
+      px(9, 16, 2, 1, PALETTE.beigeLight);
+
+      px(4, 19, 3, 1, PALETTE.ink);
+      px(9, 19, 4, 1, PALETTE.ink);
+    }
+
+    if (state.psychologyFx > 0) {
+      px(4, 5, 3, 1, "#1b1b1b");
+      px(9, 5, 3, 1, "#1b1b1b");
+      px(3, 6, 1, 2, "#1b1b1b");
+      px(12, 6, 1, 2, "#1b1b1b");
+      px(4, 6, 8, 1, "#2d2d2d");
+      px(5, 7, 2, 1, "#b3e8d8");
+      px(9, 7, 2, 1, "#b3e8d8");
+      px(7, 18, 2, 2, "#9fe3cf");
+      px(6, 17, 4, 1, "#d7fff2");
+    }
+  }
+
+  function drawPsychologia(item) {
+    const x = item.x;
+    const y = item.y;
+    const w = item.w;
+    const h = item.h;
+
+    drawShadow(x, y + h, w, 10, 0.22);
+
+    const x0 = snap4(x - w / 2);
+    const y0 = snap4(y);
+    const ww = snap4(w);
+    const hh = snap4(h);
+    ctx.fillStyle = "#3f4e61";
+    ctx.fillRect(x0, y0, ww, hh);
+    ctx.fillStyle = "#273241";
+    ctx.fillRect(x0 + 4, y0 + 4, ww - 8, hh - 8);
+    ctx.fillStyle = "#8bc7b1";
+    ctx.fillRect(x0 + 6, y0 + 6, ww - 12, 4);
+    ctx.fillStyle = "#d7e8d8";
+    ctx.fillRect(x0 + 12, y0 + 15, 12, 8);
+    ctx.fillRect(x0 + ww - 24, y0 + 15, 12, 8);
+    ctx.fillStyle = "#1b1f2a";
+    ctx.fillRect(x0 + 11, y0 + 18, 4, 2);
+    ctx.fillRect(x0 + ww - 15, y0 + 18, 4, 2);
+    ctx.fillRect(x0 + 15, y0 + 18, ww - 30, 2);
+    ctx.fillStyle = "#d7e8d8";
+    ctx.fillRect(x0 + 8, y0 + hh - 14, ww - 16, 4);
+    ctx.fillStyle = "#b3e8d8";
+    ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("PSYCHOLOGIA", x, y + h * 0.78);
   }
 
   function drawPopups() {
@@ -1264,6 +1376,17 @@
       ctx.fillRect(0, view.height * 0.18, view.width, 2);
       ctx.fillRect(0, view.height * 0.49, view.width, 2);
       ctx.fillRect(0, view.height * 0.8, view.width, 2);
+    }
+
+    if (state.psychologyFx > 0) {
+      const alpha = state.psychologyFx * 0.12;
+      ctx.fillStyle = `rgba(136, 238, 209, ${alpha})`;
+      ctx.fillRect(0, view.height * 0.2, view.width, 1);
+      ctx.fillRect(0, view.height * 0.51, view.width, 1);
+      ctx.fillRect(0, view.height * 0.76, view.width, 1);
+      ctx.fillStyle = `rgba(208, 180, 255, ${alpha * 0.6})`;
+      ctx.fillRect(0, view.height * 0.27, view.width, 1);
+      ctx.fillRect(0, view.height * 0.64, view.width, 1);
     }
   }
 
@@ -1311,6 +1434,8 @@
         drawCash(item);
       } else if (item.type === "mba") {
         drawMba(item);
+      } else if (item.type === "psychologia") {
+        drawPsychologia(item);
       } else if (item.type === "pka") {
         drawPka(item);
       }
