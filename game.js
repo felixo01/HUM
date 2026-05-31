@@ -690,7 +690,7 @@
     drawWarsawSkyline(w, h);
     ctx.fillStyle = "#1a1e24";
     ctx.fillRect(0, snap4(h * 0.42), w, snap4(h * 0.18));
-    ctx.fillStyle = "#8d3d19";
+    ctx.fillStyle = "#5a5d61";
     ctx.fillRect(0, snap4(h * 0.6), w, h - snap4(h * 0.6));
 
     ctx.fillStyle = "rgba(255,255,255,0.06)";
@@ -698,14 +698,14 @@
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(0, snap4(h * 0.6), w, 2);
 
-    ctx.fillStyle = "#4c2614";
+    ctx.fillStyle = "#5a5d61";
     ctx.fillRect(0, snap4(h * 0.81), w, snap4(h * 0.19));
     ctx.fillStyle = "#1a0d08";
     ctx.fillRect(0, snap4(h * 0.81), w, 2);
 
     const ledges = [0.12, 0.34, 0.58, 0.83];
     for (const pct of ledges) {
-      ctx.fillStyle = "rgba(255, 214, 153, 0.08)";
+      ctx.fillStyle = "rgba(210, 216, 225, 0.08)";
       const y = snap4(h * pct);
       ctx.fillRect(0, y, w, 1);
     }
@@ -724,7 +724,7 @@
     const platformY = snap4(state.player.y + state.player.height * 0.28);
     ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
     ctx.fillRect(0, platformY, w, h - platformY);
-    ctx.fillStyle = "rgba(255, 166, 88, 0.08)";
+    ctx.fillStyle = "rgba(208, 214, 224, 0.08)";
     ctx.fillRect(0, platformY + 2, w, 2);
   }
 
