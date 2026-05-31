@@ -687,6 +687,7 @@
     ctx.fillRect(0, 0, w, snap4(h * 0.18));
     ctx.fillStyle = "#10284a";
     ctx.fillRect(0, snap4(h * 0.18), w, snap4(h * 0.24));
+    drawWarsawSkyline(w, h);
     ctx.fillStyle = "#1a1e24";
     ctx.fillRect(0, snap4(h * 0.42), w, snap4(h * 0.18));
     ctx.fillStyle = "#8d3d19";
@@ -771,6 +772,86 @@
     ctx.fillRect(x0 + 3, deskY + deskH, legW, snap4(10 * scale));
     ctx.fillRect(x0 + deskW - legW - 3, deskY + deskH, legW, snap4(10 * scale));
     ctx.fillRect(x0 + 5, deskY + deskH + 1, deskW - 10, 2);
+  }
+
+  function drawWarsawSkyline(w, h) {
+    const skylineTop = snap4(h * 0.05);
+    const skylineBase = snap4(h * 0.19);
+    const cityColor = "#071327";
+    const cityDark = "#040a14";
+    const cityLight = "#14345d";
+    const towerAccent = "#d9c8a2";
+
+    ctx.fillStyle = cityDark;
+    ctx.fillRect(0, skylineBase - 2, w, 4);
+
+    const buildings = [
+      { x: 0.03, w: 0.07, h: 0.08 },
+      { x: 0.12, w: 0.09, h: 0.1 },
+      { x: 0.23, w: 0.06, h: 0.07 },
+      { x: 0.31, w: 0.11, h: 0.12 },
+      { x: 0.45, w: 0.08, h: 0.09 },
+      { x: 0.56, w: 0.08, h: 0.1 },
+      { x: 0.67, w: 0.07, h: 0.08 },
+      { x: 0.77, w: 0.1, h: 0.11 },
+      { x: 0.89, w: 0.07, h: 0.09 },
+    ];
+
+    for (const building of buildings) {
+      const bw = snap4(w * building.w);
+      const bh = snap4(h * building.h);
+      const bx = snap4(w * building.x);
+      const by = skylineBase - bh;
+      ctx.fillStyle = cityColor;
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = cityLight;
+      ctx.fillRect(bx + 2, by + 2, Math.max(2, bw - 4), 3);
+      ctx.fillStyle = "rgba(255, 214, 153, 0.12)";
+      ctx.fillRect(bx + 4, by + 8, Math.max(2, bw - 8), 2);
+    }
+
+    const palaceX = snap4(w * 0.5);
+    const palaceBaseW = snap4(w * 0.13);
+    const palaceBaseH = snap4(h * 0.16);
+    const palaceBaseX = palaceX - palaceBaseW / 2;
+    const palaceBaseY = skylineBase - palaceBaseH;
+    const palaceTowerW = snap4(w * 0.035);
+    const palaceTowerH = snap4(h * 0.22);
+    const palaceTowerX = palaceX - palaceTowerW / 2;
+    const palaceTowerY = skylineTop - 2;
+
+    ctx.fillStyle = cityDark;
+    ctx.fillRect(palaceBaseX - 4, palaceBaseY, palaceBaseW + 8, palaceBaseH + 2);
+    ctx.fillRect(palaceTowerX - 4, palaceTowerY, palaceTowerW + 8, palaceTowerH + 2);
+
+    ctx.fillStyle = "#14345d";
+    ctx.fillRect(palaceBaseX, palaceBaseY, palaceBaseW, palaceBaseH);
+    ctx.fillStyle = "#1d4a7d";
+    ctx.fillRect(palaceBaseX + 4, palaceBaseY + 4, palaceBaseW - 8, palaceBaseH - 8);
+
+    ctx.fillStyle = "#16385f";
+    ctx.fillRect(palaceTowerX, palaceTowerY + 10, palaceTowerW, palaceTowerH - 10);
+    ctx.fillStyle = "#25527f";
+    ctx.fillRect(palaceTowerX + 2, palaceTowerY + 14, palaceTowerW - 4, palaceTowerH - 18);
+
+    ctx.fillStyle = towerAccent;
+    ctx.fillRect(palaceTowerX + 2, palaceTowerY + 4, palaceTowerW - 4, 2);
+    ctx.fillRect(palaceTowerX + 2, palaceTowerY + palaceTowerH - 6, palaceTowerW - 4, 2);
+    ctx.fillRect(palaceBaseX + 6, palaceBaseY + 8, palaceBaseW - 12, 2);
+
+    for (let i = 0; i < 4; i += 1) {
+      const notchY = palaceTowerY + 18 + i * 18;
+      ctx.fillStyle = i % 2 === 0 ? towerAccent : "#f7efd4";
+      ctx.fillRect(palaceTowerX + 4, notchY, palaceTowerW - 8, 3);
+    }
+
+    ctx.fillStyle = towerAccent;
+    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 10, 4, 14);
+    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 6, palaceTowerY - 4, 12, 2);
+    ctx.fillRect(palaceTowerX + palaceTowerW / 2 - 2, palaceTowerY - 16, 4, 4);
+
+    ctx.fillStyle = "rgba(255, 244, 214, 0.18)";
+    ctx.fillRect(0, skylineTop + 4, w, 2);
   }
 
   function drawShadow(x, y, w, h, alpha) {
