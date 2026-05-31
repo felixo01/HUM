@@ -1,10 +1,10 @@
-# KOLEGA HUMANOOB: spec trybu poziomów i bossów
+# KOLEGUM HUMANOOB: spec trybu poziomów i bossów
 
 Status: implementacja bazowa działa, teraz dopinamy balans i dalsze bossy.
 
 ## Cel trybu
 
-Rozszerzyć KOLEGA HUMANOOB o pięć poziomów zakończonych walką z bossem. Tryb ma być nadal czytelny, satyryczny i grywalny na telefonie.
+Rozszerzyć KOLEGUM HUMANOOB o pięć poziomów zakończonych walką z bossem. Tryb ma być nadal czytelny, satyryczny i grywalny na telefonie.
 
 ## Pętla rozgrywki
 

@@ -1,4 +1,4 @@
-# KOLEGA HUMANOOB: otwarte decyzje i tuning
+# KOLEGUM HUMANOOB: otwarte decyzje i tuning
 
 Status: lista rzeczy do dopięcia po aktualnym audycie.
 

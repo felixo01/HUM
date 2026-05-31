@@ -6,7 +6,7 @@ const readText = (relativePath) => readFileSync(new URL(`../${relativePath}`, im
 
 test("core UI and labels are present", () => {
   const html = readText("index.html");
-  assert.match(html, /KOLEGA HUMANOOB/);
+  assert.match(html, /KOLEGUM HUMANOOB/);
   assert.match(html, /leaderboard-toggle/);
   assert.match(html, /ranking-button/);
   assert.match(html, /hud-level/);
@@ -44,7 +44,7 @@ test("cloudflare backend and migration use per-level ranking", () => {
 
 test("pages workflow runs smoke tests and uploads only the static site", () => {
   const workflow = readText(".github/workflows/pages.yml");
-  assert.match(workflow, /Deploy KOLEGA HUMANOOB to GitHub Pages/);
+  assert.match(workflow, /Deploy KOLEGUM HUMANOOB to GitHub Pages/);
   assert.match(workflow, /node --test tests\/smoke\.test\.mjs/);
   assert.match(workflow, /path: \.\/_site/);
   assert.match(workflow, /cp index\.html styles\.css game\.js \.nojekyll _site\//);

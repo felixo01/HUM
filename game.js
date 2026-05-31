@@ -2681,13 +2681,13 @@
     const isLevelClear = state.mode === "levelclear";
     const score = isLevelClear ? state.levelCompleteScore : state.score;
     const text = isLevelClear
-      ? `KOLEGA HUMANOOB - poziom ${state.level}: ${score}. Najlepszy wynik: ${state.bestScore}.`
-      : `KOLEGA HUMANOOB - wynik: ${score}. Najlepszy wynik: ${state.bestScore}.`;
+      ? `KOLEGUM HUMANOOB - poziom ${state.level}: ${score}. Najlepszy wynik: ${state.bestScore}.`
+      : `KOLEGUM HUMANOOB - wynik: ${score}. Najlepszy wynik: ${state.bestScore}.`;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "KOLEGA HUMANOOB",
+          title: "KOLEGUM HUMANOOB",
           text,
         });
         shareStatus.textContent = "Gotowe do udostępnienia.";

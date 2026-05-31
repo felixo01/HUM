@@ -1,6 +1,6 @@
-# KOLEGA HUMANOOB
+# KOLEGUM HUMANOOB
 
-KOLEGA HUMANOOB to prosta satyryczna gra 2D w stylu retro handhelda. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo, a po każdym poziomie mierzy się z bossową Renatą.
+KOLEGUM HUMANOOB to prosta satyryczna gra 2D w stylu retro handhelda. Gracz steruje małym studentem w todze i czapce, łapie spadające dyplomy, buduje combo, a po każdym poziomie mierzy się z bossową Renatą.
 
 Projekt działa jako czysta statyczna strona:
 

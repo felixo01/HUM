@@ -1,4 +1,4 @@
-# KOLEGA HUMANOOB: audyt stanu projektu
+# KOLEGUM HUMANOOB: audyt stanu projektu
 
 Data audytu: 2026-05-31
 
