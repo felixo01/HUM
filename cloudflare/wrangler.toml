@@ -1,0 +1,8 @@
+name = "humanum-leaderboard"
+main = "worker.js"
+compatibility_date = "2026-05-31"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "humanum_leaderboard"
+database_id = "CHANGE_ME_AFTER_CREATING_THE_DB"

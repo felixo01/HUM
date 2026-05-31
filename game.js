@@ -1,5 +1,6 @@
 (() => {
   const STORAGE_KEY = "humanum-best-score";
+  const LEADERBOARD_META_NAME = "humanum-leaderboard-api";
   const DURATION = 60;
   const LANE_COUNT = 5;
   const START_SCORE = 0;
@@ -37,6 +38,12 @@
   const finalScore = document.getElementById("final-score");
   const finalBest = document.getElementById("final-best");
   const shareStatus = document.getElementById("share-status");
+  const leaderboardWeek = document.getElementById("leaderboard-week");
+  const leaderboardForm = document.getElementById("leaderboard-form");
+  const leaderboardName = document.getElementById("leaderboard-name");
+  const leaderboardSubmit = document.getElementById("leaderboard-submit");
+  const leaderboardList = document.getElementById("leaderboard-list");
+  const leaderboardStatus = document.getElementById("leaderboard-status");
   const startButton = document.getElementById("start-button");
   const restartButton = document.getElementById("restart-button");
   const shareButton = document.getElementById("share-button");
@@ -69,6 +76,9 @@
     bannerText: "",
     pausedReason: "",
     lastFrame: 0,
+    leaderboardWeekKey: getIsoWeekKey(new Date()),
+    leaderboardEntries: [],
+    leaderboardLoading: false,
     player: {
       lane: Math.floor(LANE_COUNT / 2),
       x: 0,
@@ -108,6 +118,165 @@
 
   function randomLane() {
     return Math.floor(Math.random() * LANE_COUNT);
+  }
+
+  function getLeaderboardApiUrl() {
+    const meta = document.querySelector(`meta[name="${LEADERBOARD_META_NAME}"]`);
+    return meta?.content?.trim() || "";
+  }
+
+  function getIsoWeekKey(date = new Date()) {
+    const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const day = utcDate.getUTCDay() || 7;
+    utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+    const week = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
+    return `${utcDate.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+  }
+
+  function formatWeekLabel(weekKey) {
+    return weekKey ? `Tydzień ${weekKey}` : "Tydzień —";
+  }
+
+  function sanitizeNickname(name) {
+    return String(name || "")
+      .normalize("NFKC")
+      .replace(/[\u0000-\u001F\u007F<>`]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 16);
+  }
+
+  function setLeaderboardStatus(text, loading = false) {
+    leaderboardStatus.textContent = text;
+    leaderboardSubmit.disabled = loading;
+    leaderboardName.disabled = loading;
+  }
+
+  function renderLeaderboard(entries = []) {
+    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
+    leaderboardList.textContent = "";
+
+    if (!entries.length) {
+      const item = document.createElement("li");
+      item.className = "leaderboard-entry leaderboard-empty";
+      item.textContent = "Brak wyników w tym tygodniu.";
+      leaderboardList.appendChild(item);
+      return;
+    }
+
+    entries.slice(0, 10).forEach((entry, index) => {
+      const item = document.createElement("li");
+      item.className = "leaderboard-entry";
+
+      const rank = document.createElement("span");
+      rank.className = "leaderboard-rank";
+      rank.textContent = `#${index + 1}`;
+
+      const name = document.createElement("span");
+      name.className = "leaderboard-name";
+      name.textContent = entry.nickname || "anon";
+
+      const score = document.createElement("span");
+      score.className = "leaderboard-score";
+      score.textContent = String(entry.score ?? 0);
+
+      item.append(rank, name, score);
+      leaderboardList.appendChild(item);
+    });
+  }
+
+  async function loadLeaderboard() {
+    state.leaderboardWeekKey = getIsoWeekKey(new Date());
+    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
+
+    const apiUrl = getLeaderboardApiUrl();
+    if (!apiUrl) {
+      setLeaderboardStatus("Wklej adres Worker'a w meta tagu, żeby tabela działała online.", false);
+      renderLeaderboard([]);
+      return;
+    }
+
+    state.leaderboardLoading = true;
+    setLeaderboardStatus("Ładowanie tabeli...", true);
+
+    try {
+      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      state.leaderboardEntries = entries;
+      renderLeaderboard(entries);
+      setLeaderboardStatus(entries.length ? "Wyniki online są gotowe." : "Na ten tydzień jeszcze nikt nie dodał wyniku.", false);
+    } catch (error) {
+      console.error("Leaderboard load failed:", error);
+      state.leaderboardEntries = [];
+      renderLeaderboard([]);
+      setLeaderboardStatus("Nie udało się pobrać tabeli. Sprawdź URL Worker'a.", false);
+    } finally {
+      state.leaderboardLoading = false;
+    }
+  }
+
+  async function submitLeaderboardEntry(event) {
+    event.preventDefault();
+    if (state.mode !== "gameover") {
+      return;
+    }
+
+    const apiUrl = getLeaderboardApiUrl();
+    const nickname = sanitizeNickname(leaderboardName.value);
+    if (!nickname) {
+      setLeaderboardStatus("Wpisz login przed zapisaniem wyniku.", false);
+      leaderboardName.focus();
+      return;
+    }
+
+    if (!apiUrl) {
+      setLeaderboardStatus("Najpierw wklej adres Worker'a w meta tagu.", false);
+      return;
+    }
+
+    state.leaderboardWeekKey = getIsoWeekKey(new Date());
+    setLeaderboardStatus("Zapisywanie wyniku...", true);
+
+    try {
+      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          nickname,
+          score: state.score,
+          weekKey: state.leaderboardWeekKey,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      state.leaderboardEntries = entries;
+      renderLeaderboard(entries);
+      leaderboardName.value = nickname;
+      setLeaderboardStatus("Wynik zapisany. Tabela odświeżona.", false);
+    } catch (error) {
+      console.error("Leaderboard submit failed:", error);
+      setLeaderboardStatus("Nie udało się zapisać wyniku. Spróbuj ponownie.", false);
+    }
   }
 
   function loadBestScore() {
@@ -208,6 +377,7 @@
     hideBanner();
     setOverlay(null);
     shareStatus.textContent = "";
+    state.leaderboardWeekKey = getIsoWeekKey(new Date());
     syncHud();
   }
 
@@ -227,6 +397,7 @@
     setOverlay("end");
     showBanner("Koniec gry", 1.8);
     syncHud();
+    loadLeaderboard();
   }
 
   function pauseForFocus() {
@@ -1034,16 +1205,20 @@
     shareButton.addEventListener("click", () => {
       shareResult();
     });
+    leaderboardForm.addEventListener("submit", submitLeaderboardEntry);
   }
 
   function boot() {
     resizeCanvas();
     syncHud();
+    renderLeaderboard([]);
+    setLeaderboardStatus("Wpisz login i zapisz wynik po zakończeniu gry.", false);
     setOverlay("start");
     wireInput();
     wirePauseHandling();
     wireButtons();
     window.addEventListener("resize", resizeCanvas);
+    loadLeaderboard();
     requestAnimationFrame(loop);
   }
 

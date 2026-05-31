@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a2118">
+  <meta name="humanum-leaderboard-api" content="">
   <title>Humanum</title>
   <link rel="stylesheet" href="styles.css">
   <script defer src="game.js"></script>
@@ -66,6 +67,22 @@
               <button id="restart-button" class="primary-button" type="button">Zagraj ponownie</button>
               <button id="share-button" class="secondary-button" type="button">Udostępnij wynik</button>
             </div>
+            <section class="leaderboard-card" aria-label="Tabela wyników tygodnia">
+              <div class="leaderboard-head">
+                <div>
+                  <p class="panel-kicker">Tablica tygodnia</p>
+                  <h3>Leaderboard</h3>
+                </div>
+                <p id="leaderboard-week" class="leaderboard-week">Tydzień —</p>
+              </div>
+              <form id="leaderboard-form" class="leaderboard-form">
+                <label class="sr-only" for="leaderboard-name">Login</label>
+                <input id="leaderboard-name" class="leaderboard-input" type="text" maxlength="16" placeholder="Twój login" autocomplete="nickname" inputmode="text">
+                <button id="leaderboard-submit" class="secondary-button" type="submit">Zapisz wynik</button>
+              </form>
+              <ol id="leaderboard-list" class="leaderboard-list"></ol>
+              <p id="leaderboard-status" class="share-status" aria-live="polite"></p>
+            </section>
             <p id="share-status" class="share-status" aria-live="polite"></p>
           </div>
         </div>
