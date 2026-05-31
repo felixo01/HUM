@@ -310,8 +310,8 @@
   }
 
   function triggerPkaCancel() {
-    state.cancelWave = 5;
-    state.pkaStorm = 5;
+    state.cancelWave = 3;
+    state.pkaStorm = 3;
     state.flash = Math.max(state.flash, 0.28);
     state.shake = Math.max(state.shake, 0.22);
     showBanner("PKA! ANULOWANO", 1.15);
