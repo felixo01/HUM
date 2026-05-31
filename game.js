@@ -1,5 +1,6 @@
 (() => {
   const STORAGE_KEY = "humanum-best-score";
+  const LOCAL_LEADERBOARD_KEY = "humanum-local-leaderboard";
   const LEADERBOARD_META_NAME = "humanum-leaderboard-api";
   const LEADERBOARD_API_FALLBACK = "https://humanumleaderboard.felix-7d1.workers.dev";
   const DURATION = 60;
@@ -216,6 +217,76 @@
     leaderboardName.disabled = loading;
   }
 
+  function readLocalLeaderboardStore() {
+    try {
+      const raw = localStorage.getItem(LOCAL_LEADERBOARD_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeLocalLeaderboardStore(store) {
+    try {
+      localStorage.setItem(LOCAL_LEADERBOARD_KEY, JSON.stringify(store));
+    } catch {
+      // Ignore storage failures in private or restricted contexts.
+    }
+  }
+
+  function sortLeaderboardEntries(entries = []) {
+    return entries
+      .slice()
+      .sort((a, b) => {
+        const scoreDiff = Number(b.score ?? 0) - Number(a.score ?? 0);
+        if (scoreDiff !== 0) {
+          return scoreDiff;
+        }
+        const timeA = new Date(a.updated_at || 0).getTime();
+        const timeB = new Date(b.updated_at || 0).getTime();
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
+        return String(a.nickname || "").localeCompare(String(b.nickname || ""));
+      })
+      .slice(0, 10);
+  }
+
+  function getLocalLeaderboardEntries(weekKey) {
+    const store = readLocalLeaderboardStore();
+    const entries = Array.isArray(store[weekKey]) ? store[weekKey] : [];
+    return sortLeaderboardEntries(entries);
+  }
+
+  function upsertLocalLeaderboardEntry(weekKey, nickname, score) {
+    const store = readLocalLeaderboardStore();
+    const entries = Array.isArray(store[weekKey]) ? store[weekKey].slice() : [];
+    const updatedAt = new Date().toISOString();
+    const existingIndex = entries.findIndex((entry) => String(entry.nickname || "") === nickname);
+
+    if (existingIndex >= 0) {
+      const existingScore = Number(entries[existingIndex].score ?? 0);
+      if (score > existingScore) {
+        entries[existingIndex] = {
+          nickname,
+          score,
+          updated_at: updatedAt,
+        };
+      }
+    } else {
+      entries.push({
+        nickname,
+        score,
+        updated_at: updatedAt,
+      });
+    }
+
+    store[weekKey] = sortLeaderboardEntries(entries);
+    writeLocalLeaderboardStore(store);
+    return store[weekKey];
+  }
+
   function renderLeaderboard(entries = []) {
     leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
     leaderboardList.textContent = "";
@@ -275,9 +346,15 @@
       setLeaderboardStatus(entries.length ? "Wyniki online są gotowe." : "Na ten tydzień jeszcze nikt nie dodał wyniku.", false);
     } catch (error) {
       console.error("Leaderboard load failed:", error);
-      state.leaderboardEntries = [];
-      renderLeaderboard([]);
-      setLeaderboardStatus("Nie udało się pobrać tabeli. Sprawdź backend leaderboardu.", false);
+      const localEntries = getLocalLeaderboardEntries(state.leaderboardWeekKey);
+      state.leaderboardEntries = localEntries;
+      renderLeaderboard(localEntries);
+      setLeaderboardStatus(
+        localEntries.length
+          ? "Backend leaderboardu jest chwilowo niedostępny. Pokazuję zapis lokalny."
+          : "Backend leaderboardu jest chwilowo niedostępny. Możesz zapisać wynik lokalnie.",
+        false
+      );
     } finally {
       state.leaderboardLoading = false;
     }
@@ -325,7 +402,11 @@
       setLeaderboardStatus("Wynik zapisany. Tabela odświeżona.", false);
     } catch (error) {
       console.error("Leaderboard submit failed:", error);
-      setLeaderboardStatus("Nie udało się zapisać wyniku. Sprawdź backend leaderboardu.", false);
+      const localEntries = upsertLocalLeaderboardEntry(state.leaderboardWeekKey, nickname, state.score);
+      state.leaderboardEntries = localEntries;
+      renderLeaderboard(localEntries);
+      leaderboardName.value = nickname;
+      setLeaderboardStatus("Wynik zapisany lokalnie. Backend leaderboardu jest chwilowo niedostępny.", false);
     }
   }
 
