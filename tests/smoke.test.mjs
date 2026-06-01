@@ -26,6 +26,9 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /assets\/MBA\.png/);
   assert.match(game, /assets\/PKA\.png/);
   assert.match(game, /assets\/lapowka\.png/);
+  assert.match(game, /mba:[\s\S]*?drawScale:\s*1\.55/);
+  assert.match(game, /pka:[\s\S]*?drawScale:\s*1\.8/);
+  assert.match(game, /lapowka:[\s\S]*?drawScale:\s*1\.5/);
   assert.match(game, /transitionKind/);
   assert.match(game, /beginBossIntroPhase/);
   assert.match(game, /beginLevelClearPhase/);

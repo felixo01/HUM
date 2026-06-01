@@ -106,14 +106,17 @@
     mba: {
       key: "mba",
       scale: 3.12,
+      drawScale: 1.55,
     },
     pka: {
       key: "pka",
       scale: 4.12,
+      drawScale: 1.8,
     },
     lapowka: {
       key: "lapowka",
       scale: 3.0,
+      drawScale: 1.5,
     },
   };
 
@@ -620,10 +623,11 @@
 
     const config = ASSET_RENDER_CONFIG[key] || {};
     const scale = options.scale ?? config.scale ?? 1;
+    const renderScale = options.drawScale ?? config.drawScale ?? 1;
     const scaleX = options.scaleX ?? 1;
     const scaleY = options.scaleY ?? 1;
-    const drawW = Math.max(1, Math.round(boxW * scale * scaleX));
-    const drawH = Math.max(1, Math.round(boxH * scale * scaleY));
+    const drawW = Math.max(1, Math.round(boxW * scale * renderScale * scaleX));
+    const drawH = Math.max(1, Math.round(boxH * scale * renderScale * scaleY));
     const offsetX = Math.round((options.offsetX ?? config.offsetX ?? 0) + 0);
     const offsetY = Math.round((options.offsetY ?? config.offsetY ?? 0) + 0);
     const rotate = options.rotate ?? config.rotate ?? false;
