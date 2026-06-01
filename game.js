@@ -3252,7 +3252,7 @@
     });
     restartButton.addEventListener("click", () => {
       logFlow("restartButton.click", { mode: state.mode, level: state.level });
-      if (state.mode === "levelclear") {
+      if (state.mode === "levelclear" || state.resultKind === "levelclear") {
         finishLevel();
         return;
       }

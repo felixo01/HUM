@@ -192,6 +192,165 @@ function createFlowHarness() {
   return build();
 }
 
+function createNextLevelHarness() {
+  const game = readText("game.js");
+  const functions = [
+    "beginCollectPhase",
+    "finishLevel",
+    "update",
+    "wireButtons",
+  ].map((name) => extractNamedFunction(game, name)).join("\n\n");
+
+  const build = new Function(`
+    const MAX_LEVEL = 5;
+    const ROUND_DURATION = 10;
+    const state = {
+      mode: "levelclear",
+      phase: "results",
+      level: 1,
+      transitionKind: null,
+      transitionTimer: 0,
+      resultKind: "levelclear",
+      timeLeft: 0,
+      score: 300,
+      levelGoal: 6,
+      levelProgress: 0,
+      levelScoreStart: 100,
+      levelCompleteScore: 200,
+      leaderboardLevel: 1,
+      leaderboardSubmissionScore: 0,
+      leaderboardExpanded: false,
+      playerHp: 3,
+      combo: 0,
+      bonusUnlocked: false,
+      spawnTimer: 0,
+      pkaTimer: 1,
+      pkaStorm: 0,
+      cancelWave: 0,
+      items: [],
+      bossShots: [],
+      playerShots: [],
+      specialDrop: null,
+      boss: null,
+      attackCooldown: 0,
+      popups: [],
+      flash: 0,
+      shake: 0,
+      mbaFx: 0,
+      speedBoost: 0,
+      bannerTimer: 0,
+      pausedReason: "",
+      player: {
+        lane: 2,
+        x: 0,
+        y: 0,
+        width: 60,
+        height: 88,
+        bob: 0,
+        facing: 1,
+        runPhase: 0,
+      },
+      input: {
+        dragging: false,
+        pointerId: null,
+        touchMode: false,
+      },
+    };
+    const overlayCalls = [];
+    const startGameCalls = [];
+    const spawned = [];
+
+    function makeElement() {
+      const handlers = new Map();
+      return {
+        textContent: "",
+        hidden: false,
+        disabled: false,
+        classList: { toggle: () => {} },
+        setAttribute: () => {},
+        addEventListener: (type, cb) => {
+          handlers.set(type, cb);
+        },
+        trigger: (type = "click") => {
+          const cb = handlers.get(type);
+          if (cb) {
+            cb({ preventDefault: () => {} });
+          }
+        },
+      };
+    }
+
+    const startButton = makeElement();
+    const shareButton = makeElement();
+    const bossActionButton = makeElement();
+    const rankingButton = makeElement();
+    const leaderboardForm = makeElement();
+    const leaderboardToggle = makeElement();
+    const restartButton = makeElement();
+
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const clampLevel = (level) => clamp(Number(level) || 1, 1, MAX_LEVEL);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const randomRange = (min) => min;
+    const getLevelGoal = (level) => 4 + clamp(level, 1, MAX_LEVEL);
+    const getDifficulty = () => ({ spawnInterval: 0.25, extraSpawnChance: 0, curve: 0 });
+    const getRoundProgress = () => 0;
+    const getDiplomaTheme = () => ({ body: "#fff" });
+    const updatePlayer = () => {};
+    const updateItems = () => {};
+    const updateSpecialDrop = () => {};
+    const updateBossBattle = () => {};
+    const updatePopups = () => {};
+    const updateEffects = () => {};
+    const beginBossIntroPhase = () => {};
+    const beginBossPhase = () => {};
+    const showLevelClearResults = () => {};
+    const triggerPkaAlert = () => {};
+    const syncHud = () => {};
+    const clearBattlefield = () => {
+      state.items.length = 0;
+      state.bossShots.length = 0;
+      state.playerShots.length = 0;
+      state.specialDrop = null;
+    };
+    const showBanner = () => {};
+    const setOverlay = (value) => { overlayCalls.push(value); };
+    const setLeaderboardExpanded = (value) => { state.leaderboardExpanded = Boolean(value); };
+    const syncResultOverlay = () => {};
+    const loadLeaderboard = () => {};
+    const submitLeaderboardEntry = () => {};
+    const fireBook = () => {};
+    const shareResult = () => {};
+    const logFlow = () => {};
+    const endGame = () => {
+      state.mode = "gameover";
+      state.phase = "results";
+      state.resultKind = "gameover";
+    };
+    const startGame = () => {
+      startGameCalls.push("start");
+    };
+    const spawnItem = (type) => {
+      spawned.push(type);
+      state.items.push({ type });
+    };
+
+    ${functions}
+
+    return {
+      state,
+      wireButtons,
+      update,
+      restartButton,
+      overlayCalls,
+      spawned,
+      startGameCalls,
+    };
+  `);
+
+  return build();
+}
+
 test("core UI and labels are present", () => {
   const html = readText("index.html");
   assert.match(html, /KOLEGUM HUMANOOB/);
@@ -298,14 +457,14 @@ test("level clear flow clears the overlay before advancing to the next level", (
   const game = readText("game.js");
   assert.match(game, /function finishLevel\(\) \{[\s\S]*?setOverlay\(null\);[\s\S]*?beginCollectPhase\(state\.level \+ 1\);/);
   assert.match(game, /restartButton\.textContent = levelClear[\s\S]*?\? \(state\.level >= MAX_LEVEL \? "Zako\u0144cz gr\u0119" : "Nast\u0119pny poziom"\)/);
-  assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
+  assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear" \|\| state\.resultKind === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
 });
 
 test("boss defeat keeps levels 1-4 in levelclear and ends only on the final level", () => {
   const game = readText("game.js");
   assert.match(game, /function defeatBoss\(\) \{[\s\S]*?if \(state\.level >= MAX_LEVEL\) \{[\s\S]*?endGame\(\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?showBanner\(`Poziom \$\{state\.level\} zaliczony`, 1\.1\);[\s\S]*?beginLevelClearPhase\(\);/);
   assert.match(game, /function showLevelClearResults\(\) \{[\s\S]*?state\.mode = "levelclear";/);
-  assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
+  assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear" \|\| state\.resultKind === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
   assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#e7c2cb[\s\S]*?#d9ead2[\s\S]*?#dbe5ff[\s\S]*?#e4daf6/);
 });
 
@@ -348,5 +507,25 @@ test("flow functions enforce levelclear vs gameover behavior", () => {
   flow.defeatBoss();
   assert.equal(flow.state.mode, "gameover");
   assert.equal(flow.endGameCalls.length, 1);
+});
+
+test("levelclear restart click starts level 2 collect flow and spawns diplomas again", () => {
+  const harness = createNextLevelHarness();
+  harness.wireButtons();
+
+  harness.restartButton.trigger("click");
+
+  assert.equal(harness.state.mode, "playing");
+  assert.equal(harness.state.phase, "collect");
+  assert.equal(harness.state.level, 2);
+  assert.equal(harness.state.timeLeft, 10);
+  assert.equal(harness.state.transitionKind, null);
+  assert.equal(harness.overlayCalls.at(-1), null);
+  assert.equal(harness.startGameCalls.length, 0);
+
+  harness.update(0.3);
+  harness.update(0.3);
+  assert.ok(harness.state.items.length > 0);
+  assert.ok(harness.spawned.includes("diploma"));
 });
 
