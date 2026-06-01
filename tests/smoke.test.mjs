@@ -29,6 +29,13 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /mba:[\s\S]*?drawScale:\s*1\.55/);
   assert.match(game, /pka:[\s\S]*?drawScale:\s*1\.8/);
   assert.match(game, /lapowka:[\s\S]*?drawScale:\s*1\.5/);
+  assert.match(game, /BOSS_HP_BY_LEVEL/);
+  assert.match(game, /BOSS_ATTACK_INTERVAL_BY_LEVEL/);
+  assert.match(game, /BOOK_COOLDOWN_BY_LEVEL/);
+  assert.match(game, /hitCooldown/);
+  assert.match(game, /boss\.hitCooldown = 0\.22/);
+  assert.match(game, /boss\.hitCooldown = Math\.max\(0, boss\.hitCooldown - dt\)/);
+  assert.doesNotMatch(game, /hp:\s*3\s*\+\s*level/);
   assert.match(game, /transitionKind/);
   assert.match(game, /beginBossIntroPhase/);
   assert.match(game, /beginLevelClearPhase/);

@@ -120,6 +120,10 @@
     },
   };
 
+  const BOSS_HP_BY_LEVEL = [6, 8, 10, 12, 15];
+  const BOSS_ATTACK_INTERVAL_BY_LEVEL = [1.45, 1.25, 1.1, 0.95, 0.82];
+  const BOOK_COOLDOWN_BY_LEVEL = [0.45, 0.48, 0.52, 0.56, 0.6];
+
   const audio = {
     context: null,
     master: null,
@@ -422,11 +426,12 @@
   }
 
   function getBossConfig(level) {
-    const normalized = clamp((level - 1) / Math.max(1, MAX_LEVEL - 1), 0, 1);
+    const levelIndex = clampLevel(level) - 1;
+    const normalized = clamp(levelIndex / Math.max(1, MAX_LEVEL - 1), 0, 1);
     return {
       name: "Renata",
-      hp: 3 + level,
-      attackInterval: lerp(1.55, 0.82, normalized),
+      hp: BOSS_HP_BY_LEVEL[levelIndex],
+      attackInterval: BOSS_ATTACK_INTERVAL_BY_LEVEL[levelIndex],
       attackJitter: lerp(0.18, 0.08, normalized),
       shotSpeed: lerp(220, 300, normalized),
       shotSpread: lerp(0.02, 0.08, normalized),
@@ -1060,6 +1065,7 @@
       shotSpeed: boss.shotSpeed,
       shotSpread: boss.shotSpread,
       shotCount: boss.shotCount,
+      hitCooldown: 0,
     };
     state.playerHp = boss.playerHp;
     state.attackCooldown = 0;
@@ -1138,7 +1144,8 @@
       return;
     }
 
-    const cooldown = lerp(0.38, 0.25, (state.level - 1) / Math.max(1, MAX_LEVEL - 1));
+    const levelIndex = clampLevel(state.level) - 1;
+    const cooldown = BOOK_COOLDOWN_BY_LEVEL[levelIndex];
     state.attackCooldown = cooldown;
     state.playerShots.push({
       type: "book",
@@ -1187,9 +1194,14 @@
       return;
     }
 
+    if (state.boss.hitCooldown > 0) {
+      return;
+    }
+
     state.boss.hp = Math.max(0, state.boss.hp - damage);
+    state.boss.hitCooldown = 0.22;
     state.flash = Math.max(state.flash, 0.22);
-    state.shake = Math.max(state.shake, 0.15);
+    state.shake = Math.max(state.shake, 0.18);
     addPopup(`-${damage}`, sourceX, sourceY, PALETTE.goldSoft);
     playSound("hit");
     if (state.boss.hp <= 0) {
@@ -1544,6 +1556,7 @@
     const playerBottom = playerY + playerH * 0.25;
 
     boss.attackTimer -= dt;
+    boss.hitCooldown = Math.max(0, boss.hitCooldown - dt);
     if (boss.attackTimer <= 0) {
       spawnBossShot();
     }
