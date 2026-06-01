@@ -4,6 +4,194 @@ import { test } from "node:test";
 
 const readText = (relativePath) => readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
 
+function extractNamedFunction(source, name) {
+  const startToken = `function ${name}(`;
+  const start = source.indexOf(startToken);
+  assert.notEqual(start, -1, `Missing function ${name} in game.js`);
+
+  const bodyStart = source.indexOf("{", start);
+  assert.notEqual(bodyStart, -1, `Missing body for function ${name}`);
+
+  let i = bodyStart;
+  let depth = 0;
+  let quote = "";
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  for (; i < source.length; i += 1) {
+    const ch = source[i];
+    const next = source[i + 1];
+
+    if (inLineComment) {
+      if (ch === "\n") {
+        inLineComment = false;
+      }
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (ch === "*" && next === "/") {
+        inBlockComment = false;
+        i += 1;
+      }
+      continue;
+    }
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch === quote) {
+        quote = "";
+      }
+      continue;
+    }
+
+    if (ch === "/" && next === "/") {
+      inLineComment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      inBlockComment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === "'" || ch === "\"" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+
+    if (ch === "{") {
+      depth += 1;
+      continue;
+    }
+    if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, i + 1);
+      }
+    }
+  }
+
+  throw new Error(`Could not extract function ${name}`);
+}
+
+function createFlowHarness() {
+  const game = readText("game.js");
+  const functions = [
+    "syncResultOverlay",
+    "beginLevelClearPhase",
+    "showLevelClearResults",
+    "finishLevel",
+    "defeatBoss",
+    "update",
+  ].map((name) => extractNamedFunction(game, name)).join("\n\n");
+
+  const build = new Function(`
+    const MAX_LEVEL = 5;
+    const PALETTE = { goldSoft: "#ffe49a" };
+    const view = { width: 900, height: 600 };
+    const state = {
+      mode: "playing",
+      phase: "boss",
+      level: 1,
+      score: 250,
+      bestScore: 300,
+      levelScoreStart: 100,
+      levelCompleteScore: 0,
+      resultKind: "",
+      leaderboardExpanded: false,
+      leaderboardWeekKey: "",
+      leaderboardLevel: 1,
+      leaderboardSubmissionScore: 0,
+      transitionKind: null,
+      transitionTimer: 0,
+      flash: 0,
+      shake: 0,
+      attackCooldown: 0,
+      boss: { hp: 1 },
+      playerHp: 3,
+      popups: [],
+    };
+
+    const finalTitle = { textContent: "" };
+    const finalScore = { textContent: "" };
+    const finalBest = { textContent: "" };
+    const restartButton = { textContent: "" };
+    const leaderboardSubmit = { textContent: "" };
+    const leaderboardToggleHint = { textContent: "" };
+    const shareStatus = { textContent: "" };
+    const resultLabelPrefix = { textContent: "" };
+
+    const overlayCalls = [];
+    const collectCalls = [];
+    const endGameCalls = [];
+    const bannerCalls = [];
+
+    const logFlow = () => {};
+    const setOverlay = (value) => { overlayCalls.push(value); };
+    const beginCollectPhase = (level) => {
+      collectCalls.push(level);
+      state.mode = "playing";
+      state.phase = "collect";
+      state.level = level;
+    };
+    const endGame = () => {
+      endGameCalls.push({ level: state.level, score: state.score });
+      state.mode = "gameover";
+      state.phase = "results";
+      state.resultKind = "gameover";
+    };
+    const clearBattlefield = () => {};
+    const playSound = () => {};
+    const addPopup = () => {};
+    const getIsoWeekKey = () => "2026-W23";
+    const setLeaderboardExpanded = (expanded) => { state.leaderboardExpanded = Boolean(expanded); };
+    const renderLeaderboard = () => {};
+    const loadLeaderboard = () => {};
+    const syncHud = () => {};
+    const syncBossActionButton = () => {};
+    const showBanner = (text) => { bannerCalls.push(text); };
+    const setLeaderboardStatus = () => {};
+    const updateEffects = () => {};
+    const updatePopups = () => {};
+    const beginBossPhase = () => {};
+    const updatePlayer = () => {};
+    const updateCollectItems = () => {};
+    const updateBossBattle = () => {};
+    const updateSpecialDrop = () => {};
+    const hideBanner = () => {};
+
+    ${functions}
+
+    return {
+      state,
+      syncResultOverlay,
+      beginLevelClearPhase,
+      showLevelClearResults,
+      finishLevel,
+      defeatBoss,
+      update,
+      restartButton,
+      finalTitle,
+      resultLabelPrefix,
+      overlayCalls,
+      collectCalls,
+      endGameCalls,
+      bannerCalls,
+    };
+  `);
+
+  return build();
+}
+
 test("core UI and labels are present", () => {
   const html = readText("index.html");
   assert.match(html, /KOLEGUM HUMANOOB/);
@@ -119,5 +307,46 @@ test("boss defeat keeps levels 1-4 in levelclear and ends only on the final leve
   assert.match(game, /function showLevelClearResults\(\) \{[\s\S]*?state\.mode = "levelclear";/);
   assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
   assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#e7c2cb[\s\S]*?#d9ead2[\s\S]*?#dbe5ff[\s\S]*?#e4daf6/);
+});
+
+test("flow functions enforce levelclear vs gameover behavior", () => {
+  const flow = createFlowHarness();
+
+  flow.state.level = 1;
+  flow.state.levelCompleteScore = 222;
+  flow.state.score = 999;
+  flow.syncResultOverlay("levelclear");
+  assert.equal(flow.restartButton.textContent, "Następny poziom");
+  assert.equal(flow.finalTitle.textContent, "Poziom 1 zaliczony");
+  assert.equal(flow.resultLabelPrefix.textContent, "Wynik poziomu:");
+
+  flow.syncResultOverlay("gameover");
+  assert.equal(flow.restartButton.textContent, "Zagraj ponownie");
+
+  flow.state.level = 1;
+  flow.state.mode = "playing";
+  flow.state.phase = "boss";
+  flow.state.boss = { hp: 1 };
+  flow.defeatBoss();
+  assert.equal(flow.state.phase, "transition");
+  assert.equal(flow.state.transitionKind, "level-clear");
+  assert.equal(flow.endGameCalls.length, 0);
+
+  flow.state.transitionTimer = 0;
+  flow.update(0.016);
+  assert.equal(flow.state.mode, "levelclear");
+  assert.equal(flow.state.phase, "results");
+
+  flow.finishLevel();
+  assert.equal(flow.overlayCalls.at(-1), null);
+  assert.deepEqual(flow.collectCalls, [2]);
+
+  flow.state.level = 5;
+  flow.state.mode = "playing";
+  flow.state.phase = "boss";
+  flow.state.boss = { hp: 1 };
+  flow.defeatBoss();
+  assert.equal(flow.state.mode, "gameover");
+  assert.equal(flow.endGameCalls.length, 1);
 });
 

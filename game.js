@@ -1608,6 +1608,9 @@
       if (overlapsBoss) {
         state.playerShots.splice(i, 1);
         hitBoss(1, shot.x, shot.y);
+        if (state.mode !== "playing" || state.phase !== "boss" || !state.boss) {
+          return;
+        }
         continue;
       }
 
