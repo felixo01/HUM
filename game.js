@@ -1252,13 +1252,16 @@
   }
 
   function hitPlayer(damage, sourceX, sourceY) {
+    if (state.mode !== "playing" || state.phase !== "boss" || !state.boss || state.boss.hp <= 0) {
+      return;
+    }
     state.playerHp = Math.max(0, state.playerHp - damage);
     state.flash = Math.max(state.flash, 0.18);
     state.shake = Math.max(state.shake, 0.22);
     addPopup(`-${damage}`, sourceX, sourceY, PALETTE.redWarm);
     playSound("hurt");
     if (state.playerHp <= 0) {
-      showBanner("Renata wygrała", 1.1);
+      showBanner("Renata wygra\u0142a", 1.1);
       endGame("player-dead");
     }
   }
@@ -1346,6 +1349,19 @@
         });
       }
       beginBossIntroPhase();
+      return;
+    }
+
+    if (state.transitionKind === "level-clear" || state.mode === "levelclear") {
+      if (DEV_MODE) {
+        console.warn("[ENDGAME GUARD] blocked during level-clear transition", {
+          level: state.level,
+          reason,
+          transitionKind: state.transitionKind,
+          mode: state.mode,
+        });
+      }
+      showLevelClearResults();
       return;
     }
 
