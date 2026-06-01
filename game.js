@@ -5,6 +5,8 @@
   const LEADERBOARD_API_FALLBACK = "https://humanumleaderboard.felix-7d1.workers.dev";
   const MAX_LEVEL = 5;
   const DURATION = 60;
+  const DEV_MODE = new URLSearchParams(window.location.search).get("dev") === "1";
+  const ROUND_DURATION = DEV_MODE ? 10 : DURATION;
   const LANE_COUNT = 5;
   const START_SCORE = 0;
   const PALETTE = {
@@ -144,7 +146,7 @@
 
   const state = {
     mode: "start",
-    timeLeft: DURATION,
+    timeLeft: ROUND_DURATION,
     score: START_SCORE,
     bestScore: loadBestScore(),
     level: 1,
@@ -201,6 +203,10 @@
       touchMode: false,
     },
   };
+
+  if (DEV_MODE) {
+    window.__HUMANOOB_DEV = { state };
+  }
 
   const laneSpacing = () => {
     const inner = view.width * 0.82;
@@ -388,7 +394,7 @@
   }
 
   function getRoundProgress() {
-    return clamp(1 - state.timeLeft / DURATION, 0, 1);
+    return clamp(1 - state.timeLeft / ROUND_DURATION, 0, 1);
   }
 
   function getDifficulty(progress, level = state.level) {
@@ -407,6 +413,21 @@
       pkaSpeed: lerp(280, 440, mix),
       pkaVerticalBoost: lerp(1.1, 1.34, mix),
     };
+  }
+
+  function logFlow(label, payload = {}) {
+    if (!DEV_MODE) {
+      return;
+    }
+
+    console.log("[FLOW]", JSON.stringify({
+      label,
+      level: state.level,
+      phase: state.phase,
+      mode: state.mode,
+      ...payload,
+      t: Math.round(performance.now()),
+    }));
   }
 
   function getLevelGoal(level) {
@@ -1023,7 +1044,7 @@
     state.phase = "collect";
     state.transitionKind = null;
     state.resultKind = "";
-    state.timeLeft = DURATION;
+    state.timeLeft = ROUND_DURATION;
     state.levelProgress = 0;
     state.levelGoal = getLevelGoal(state.level);
     state.levelScoreStart = state.score;
@@ -1090,6 +1111,7 @@
   }
 
   function beginLevelClearPhase() {
+    logFlow("beginLevelClearPhase", { level: state.level });
     state.phase = "transition";
     state.transitionKind = "level-clear";
     state.transitionTimer = 2.2;
@@ -1101,6 +1123,7 @@
   }
 
   function finishLevel() {
+    logFlow("finishLevel", { nextLevel: state.level + 1 });
     state.transitionKind = null;
     setOverlay(null);
     if (state.level >= MAX_LEVEL) {
@@ -1111,6 +1134,7 @@
   }
 
   function showLevelClearResults() {
+    logFlow("showLevelClearResults", { level: state.level });
     state.mode = "levelclear";
     state.phase = "results";
     state.resultKind = "levelclear";
@@ -1128,6 +1152,7 @@
   }
 
   function defeatBoss() {
+    logFlow("defeatBoss", { level: state.level, score: state.score });
     state.flash = Math.max(state.flash, 0.4);
     state.shake = Math.max(state.shake, 0.2);
     const bonus = 120 + state.level * 30;
@@ -1227,7 +1252,7 @@
 
   function resetRound() {
     state.mode = "playing";
-    state.timeLeft = DURATION;
+    state.timeLeft = ROUND_DURATION;
     state.score = START_SCORE;
     state.level = 1;
     state.phase = "collect";
@@ -1284,6 +1309,7 @@
   }
 
   function endGame() {
+    logFlow("endGame", { level: state.level, score: state.score });
     state.mode = "gameover";
     state.phase = "results";
     state.resultKind = "gameover";
@@ -3222,6 +3248,7 @@
       }
     });
     restartButton.addEventListener("click", () => {
+      logFlow("restartButton.click", { mode: state.mode, level: state.level });
       if (state.mode === "levelclear") {
         finishLevel();
         return;

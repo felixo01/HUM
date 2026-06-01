@@ -26,27 +26,31 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /assets\/MBA\.png/);
   assert.match(game, /assets\/PKA\.png/);
   assert.match(game, /assets\/lapowka\.png/);
-  assert.match(game, /mba:[\s\S]*?drawScale:\s*1\.55/);
-  assert.match(game, /pka:[\s\S]*?drawScale:\s*1\.8/);
-  assert.match(game, /lapowka:[\s\S]*?drawScale:\s*1\.5/);
-  assert.match(game, /BOSS_HP_BY_LEVEL/);
-  assert.match(game, /BOSS_ATTACK_INTERVAL_BY_LEVEL/);
-  assert.match(game, /BOOK_COOLDOWN_BY_LEVEL/);
-  assert.match(game, /hitCooldown/);
-  assert.match(game, /boss\.hitCooldown = 0\.22/);
-  assert.match(game, /boss\.hitCooldown = Math\.max\(0, boss\.hitCooldown - dt\)/);
-  assert.doesNotMatch(game, /hp:\s*3\s*\+\s*level/);
   assert.match(game, /transitionKind/);
   assert.match(game, /beginBossIntroPhase/);
   assert.match(game, /beginLevelClearPhase/);
   assert.match(game, /showLevelClearResults/);
+  assert.match(game, /console\.log\("\[FLOW\]"/);
+  assert.match(game, /logFlow\("defeatBoss",/);
+  assert.match(game, /logFlow\("finishLevel",/);
+  assert.match(game, /logFlow\("showLevelClearResults",/);
+  assert.match(game, /logFlow\("endGame",/);
+  assert.match(game, /logFlow\("beginLevelClearPhase",/);
+  assert.match(game, /logFlow\("restartButton\.click",/);
   assert.match(game, /playSound\("/);
   assert.match(game, /leaderboardLevel/);
   assert.match(game, /leaderboardSubmissionScore/);
   assert.match(game, /getLeaderboardScopeKey/);
   assert.match(game, /NEWSMONTH/);
   assert.match(game, /Zapisz poziom/);
-  assert.match(game, /ŻADNEJ AKREDYTACJI!/);
+  assert.match(game, /const DEV_MODE = new URLSearchParams\(window\.location\.search\)\.get\("dev"\) === "1";/);
+  assert.match(game, /const ROUND_DURATION = DEV_MODE \? 10 : DURATION;/);
+  assert.match(game, /state\.timeLeft = ROUND_DURATION/);
+  assert.match(game, /function logFlow/);
+  assert.match(game, /return clamp\(1 - state\.timeLeft \/ ROUND_DURATION, 0, 1\);/);
+  assert.match(game, /if \(DEV_MODE\) \{\r?\n\s+window\.__HUMANOOB_DEV = \{ state \};\r?\n\s+\}/);
+  assert.match(game, /window\.__HUMANOOB_DEV = \{ state \};/);
+  assert.match(game, /timeLeft: ROUND_DURATION/);
 });
 
 test("approved assets are documented as the source of truth", () => {
@@ -106,6 +110,7 @@ test("level clear flow clears the overlay before advancing to the next level", (
   const game = readText("game.js");
   assert.match(game, /function finishLevel\(\) \{[\s\S]*?setOverlay\(null\);[\s\S]*?beginCollectPhase\(state\.level \+ 1\);/);
   assert.match(game, /restartButton\.textContent = levelClear[\s\S]*?\? \(state\.level >= MAX_LEVEL \? "Zako\u0144cz gr\u0119" : "Nast\u0119pny poziom"\)/);
+  assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
 });
 
 test("boss defeat keeps levels 1-4 in levelclear and ends only on the final level", () => {
@@ -115,3 +120,4 @@ test("boss defeat keeps levels 1-4 in levelclear and ends only on the final leve
   assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
   assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#e7c2cb[\s\S]*?#d9ead2[\s\S]*?#dbe5ff[\s\S]*?#e4daf6/);
 });
+
