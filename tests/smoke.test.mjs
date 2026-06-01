@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
@@ -125,6 +125,7 @@ function createFlowHarness() {
     };
 
     const finalTitle = { textContent: "" };
+    const finalEyebrow = { textContent: "" };
     const finalScore = { textContent: "" };
     const finalBest = { textContent: "" };
     const restartButton = { textContent: "" };
@@ -152,7 +153,7 @@ function createFlowHarness() {
       state.phase = "results";
       state.resultKind = "gameover";
       state.endGameReason = reason;
-      state.gameoverTitle = reason === "player-dead" ? "Renata wygrała" : "Koniec gry";
+      state.gameoverTitle = reason === "player-dead" ? "Renata wygra\u0142a" : "Koniec gry";
     };
     const clearBattlefield = () => {};
     const playSound = () => {};
@@ -197,6 +198,7 @@ function createFlowHarness() {
       update,
       restartButton,
       finalTitle,
+      finalEyebrow,
       resultLabelPrefix,
       overlayCalls,
       collectCalls,
@@ -524,6 +526,29 @@ test("flow functions enforce levelclear vs gameover behavior", () => {
   assert.equal(flow.state.mode, "gameover");
   assert.equal(flow.endGameCalls.length, 1);
   assert.equal(flow.endGameCalls[0].reason, "final-boss");
+});
+
+test("player-dead gameover uses boss defeat messaging and final-boss keeps standard gameover", () => {
+  const game = readText("game.js");
+  const flow = createFlowHarness();
+
+  flow.state.endGameReason = "player-dead";
+  flow.state.gameoverTitle = "Renata wygra\u0142a";
+  flow.syncResultOverlay("gameover");
+  assert.equal(flow.state.gameoverTitle, "Renata wygra\u0142a");
+  assert.equal(flow.finalEyebrow.textContent, "BOSS WYGRA\u0141");
+  assert.equal(flow.finalTitle.textContent, "RENATA WYGRA\u0141A");
+  assert.equal(flow.restartButton.textContent, "SPR\u00d3BUJ PONOWNIE");
+
+  flow.state.endGameReason = "final-boss";
+  flow.state.gameoverTitle = "Koniec gry";
+  flow.syncResultOverlay("gameover");
+  assert.equal(flow.finalEyebrow.textContent, "KONIEC GRY");
+  assert.equal(flow.finalTitle.textContent, "KONIEC GRY");
+  assert.equal(flow.restartButton.textContent, "Zagraj ponownie");
+
+  assert.match(game, /state\.gameoverTitle = reason === "player-dead" \? "Renata wygra\\u0142a" : "Koniec gry";/);
+  assert.match(game, /\[ENDGAME CALL\][\s\S]*?playerHp: state\.playerHp,/);
 });
 
 test("collect timer expiry on level 1 goes to boss intro and does not call endGame", () => {

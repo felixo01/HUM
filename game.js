@@ -40,8 +40,10 @@
   const overlayStart = document.getElementById("overlay-start");
   const overlayEnd = document.getElementById("overlay-end");
   const banner = document.getElementById("banner");
+  const finalTitle = document.getElementById("final-title");
   const finalScore = document.getElementById("final-score");
   const finalBest = document.getElementById("final-best");
+  const finalEyebrow = overlayEnd?.querySelector(".panel-kicker");
   const hudLevel = document.getElementById("hud-level");
   const leaderboardToggle = document.getElementById("leaderboard-toggle");
   const leaderboardToggleHint = document.getElementById("leaderboard-toggle-hint");
@@ -711,17 +713,24 @@
     const levelClear = kind === "levelclear";
     const scoreValue = levelClear ? state.levelCompleteScore : state.score;
     const prefix = levelClear ? "Wynik poziomu:" : "Najlepszy wynik:";
+    const playerDead = !levelClear && state.endGameReason === "player-dead";
+    const gameoverTitle = playerDead ? "RENATA WYGRA\u0141A" : "KONIEC GRY";
 
     if (resultLabelPrefix) {
       resultLabelPrefix.textContent = prefix;
     }
 
-    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : (state.gameoverTitle || "Koniec gry");
+    if (finalEyebrow) {
+      finalEyebrow.textContent = levelClear
+        ? "Poziom zaliczony"
+        : (playerDead ? "BOSS WYGRA\u0141" : "KONIEC GRY");
+    }
+    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : gameoverTitle;
     finalScore.textContent = String(scoreValue);
     finalBest.textContent = String(levelClear ? scoreValue : state.bestScore);
     restartButton.textContent = levelClear
       ? (state.level >= MAX_LEVEL ? "Zakończ grę" : "Następny poziom")
-      : "Zagraj ponownie";
+      : (playerDead ? "SPR\u00d3BUJ PONOWNIE" : "Zagraj ponownie");
     leaderboardSubmit.textContent = levelClear ? "Zapisz poziom" : "Zapisz wynik";
     leaderboardToggleHint.textContent = state.leaderboardExpanded
       ? (levelClear ? "Kliknij, aby ukryć ranking poziomu" : "Kliknij, aby ukryć ranking")
@@ -732,7 +741,7 @@
         : "Wpisz login i zapisz wynik po zakończeniu gry.",
       false
     );
-    shareStatus.textContent = "";
+    shareStatus.textContent = playerDead ? "Trafi\u0142y Ci\u0119 NEWSMONTH-y" : "";
   }
 
   function readLocalLeaderboardStore() {
@@ -1320,6 +1329,7 @@
         mode: state.mode,
         phase: state.phase,
         level: state.level,
+        playerHp: state.playerHp,
         timeLeft: state.timeLeft,
         transitionKind: state.transitionKind,
         boss: Boolean(state.boss),
