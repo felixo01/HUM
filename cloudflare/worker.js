@@ -11,11 +11,16 @@ export default {
 
     if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/leaderboard")) {
       const weekKey = url.searchParams.get("week") || getCurrentIsoWeekKey();
-      const level = normalizeLevel(url.searchParams.get("level"));
-      const entries = await getLeaderboardEntries(env, weekKey, level);
+      const levelParam = url.searchParams.get("level");
+      const level = normalizeLevel(levelParam);
+      const scope = getLeaderboardScope(levelParam, level);
+      const entries = scope === "total"
+        ? await getTotalLeaderboardEntries(env, weekKey)
+        : await getLeaderboardEntries(env, weekKey, level);
       return jsonResponse({
         weekKey,
-        level,
+        level: scope === "total" ? null : level,
+        scope,
         entries,
       });
     }
@@ -54,11 +59,12 @@ export default {
         .bind(weekKey, level, nickname, score)
         .run();
 
-      const entries = await getLeaderboardEntries(env, weekKey, level);
+      const entries = await getTotalLeaderboardEntries(env, weekKey);
       return jsonResponse({
         ok: true,
         weekKey,
         level,
+        scope: "total",
         entries,
       });
     }
@@ -78,6 +84,35 @@ async function getLeaderboardEntries(env, weekKey, level) {
     `
   )
     .bind(weekKey, level)
+    .all();
+
+  return Array.isArray(result.results) ? result.results : [];
+}
+
+async function getTotalLeaderboardEntries(env, weekKey) {
+  const result = await env.DB.prepare(
+    `
+      WITH by_level AS (
+        SELECT LOWER(TRIM(nickname)) AS nick_key, level, MAX(score) AS best_score
+        FROM leaderboard
+        WHERE week_key = ?
+        GROUP BY nick_key, level
+      ),
+      nick_names AS (
+        SELECT LOWER(TRIM(nickname)) AS nick_key, MIN(nickname) AS nickname, MIN(updated_at) AS updated_at
+        FROM leaderboard
+        WHERE week_key = ?
+        GROUP BY nick_key
+      )
+      SELECT nick_names.nickname AS nickname, SUM(by_level.best_score) AS score, nick_names.updated_at AS updated_at
+      FROM by_level
+      JOIN nick_names ON nick_names.nick_key = by_level.nick_key
+      GROUP BY nick_names.nick_key
+      ORDER BY score DESC, updated_at ASC, nickname ASC
+      LIMIT ${LEADERBOARD_LIMIT}
+    `
+  )
+    .bind(weekKey, weekKey)
     .all();
 
   return Array.isArray(result.results) ? result.results : [];
@@ -114,6 +149,14 @@ function normalizeLevel(value) {
     return 1;
   }
   return Math.max(1, Math.min(MAX_LEVEL, level));
+}
+
+function getLeaderboardScope(levelParam, level) {
+  const raw = String(levelParam || "").trim().toLowerCase();
+  if (!raw || raw === "all" || raw === "total" || raw === "sum") {
+    return "total";
+  }
+  return Number.isFinite(level) ? "level" : "total";
 }
 
 function getCurrentIsoWeekKey(date = new Date()) {

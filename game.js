@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   const STORAGE_KEY = "humanum-best-score";
   const LOCAL_LEADERBOARD_KEY = "humanum-local-leaderboard";
   const LEADERBOARD_META_NAME = "humanum-leaderboard-api";
@@ -741,8 +741,8 @@
     return `${weekKey}::${clampLevel(level)}`;
   }
 
-  function formatWeekLabel(weekKey, level = state.leaderboardLevel) {
-    return weekKey ? `Tydzień ${weekKey} · Poziom ${clampLevel(level)}` : "Tydzień —";
+  function formatWeekLabel(weekKey) {
+    return weekKey ? `Tydzien ${weekKey} · suma poziomow` : "Tydzien —";
   }
 
   function sanitizeNickname(name) {
@@ -765,40 +765,12 @@
     leaderboardCard.classList.toggle("leaderboard-collapsed", !state.leaderboardExpanded);
     leaderboardToggle.setAttribute("aria-expanded", String(state.leaderboardExpanded));
     leaderboardToggleHint.textContent = state.leaderboardExpanded
-      ? "Kliknij, aby ukryć ranking"
-      : "Kliknij, aby otworzyć ranking";
-  }
-
-  function syncResultOverlay(kind = state.resultKind || state.mode) {
-    const levelClear = kind === "levelclear";
-    const scoreValue = levelClear ? state.levelCompleteScore : state.score;
-    const prefix = levelClear ? "Wynik poziomu:" : "Najlepszy wynik:";
-    const playerDead = !levelClear && state.endGameReason === "player-dead";
-    const gameoverTitle = playerDead ? "RENATA WYGRA\u0141A" : "KONIEC GRY";
-
-    if (resultLabelPrefix) {
-      resultLabelPrefix.textContent = prefix;
-    }
-
-    if (finalEyebrow) {
-      finalEyebrow.textContent = levelClear
-        ? "Poziom zaliczony"
-        : (playerDead ? "BOSS WYGRA\u0141" : "KONIEC GRY");
-    }
-    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : gameoverTitle;
-    finalScore.textContent = String(scoreValue);
-    finalBest.textContent = String(levelClear ? scoreValue : state.bestScore);
-    restartButton.textContent = levelClear
-      ? (state.level >= MAX_LEVEL ? "Zakończ grę" : "Następny poziom")
-      : (playerDead ? "SPR\u00d3BUJ PONOWNIE" : "Zagraj ponownie");
-    leaderboardSubmit.textContent = levelClear ? "Zapisz poziom" : "Zapisz wynik";
-    leaderboardToggleHint.textContent = state.leaderboardExpanded
-      ? (levelClear ? "Kliknij, aby ukryć ranking poziomu" : "Kliknij, aby ukryć ranking")
-      : (levelClear ? "Kliknij, aby otworzyć ranking poziomu" : "Kliknij, aby otworzyć ranking");
+      ? "Kliknij, aby ukryc ranking"
+      : "Kliknij, aby otworzyc ranking";
     setLeaderboardStatus(
       levelClear
         ? "Wpisz login i zapisz wynik tego poziomu."
-        : "Wpisz login i zapisz wynik po zakończeniu gry.",
+        : "Wpisz login i zapisz wynik po zakoĹ„czeniu gry.",
       false
     );
     shareStatus.textContent = playerDead ? "Trafi\u0142y Ci\u0119 NEWSMONTH-y" : "";
@@ -840,15 +812,61 @@
       .slice(0, 20);
   }
 
-  function getLocalLeaderboardEntries(weekKey, level = state.leaderboardLevel) {
+  function getLocalLeaderboardEntries(weekKey) {
     const store = readLocalLeaderboardStore();
     const weekBucket = store[weekKey];
     if (Array.isArray(weekBucket)) {
-      return clampLevel(level) === 1 ? sortLeaderboardEntries(weekBucket) : [];
+      return sortLeaderboardEntries(weekBucket);
+    }
+    if (!weekBucket || typeof weekBucket !== "object") {
+      return [];
     }
 
-    const entries = weekBucket && typeof weekBucket === "object" ? weekBucket[String(clampLevel(level))] : [];
-    return sortLeaderboardEntries(entries);
+    const totalsByNick = new Map();
+    for (const [bucketKey, bucketEntries] of Object.entries(weekBucket)) {
+      if (!Array.isArray(bucketEntries)) {
+        continue;
+      }
+      const levelKey = String(clampLevel(bucketKey));
+      for (const rawEntry of bucketEntries) {
+        const nickname = String(rawEntry?.nickname || "anon").trim();
+        const nickKey = nickname.toLowerCase();
+        const score = Number(rawEntry?.score ?? 0);
+        const updatedAt = String(rawEntry?.updated_at || "");
+
+        let acc = totalsByNick.get(nickKey);
+        if (!acc) {
+          acc = {
+            nickname,
+            score: 0,
+            updated_at: updatedAt,
+            levelScores: new Map(),
+          };
+          totalsByNick.set(nickKey, acc);
+        }
+
+        const previousLevelBest = Number(acc.levelScores.get(levelKey) ?? Number.NEGATIVE_INFINITY);
+        if (score > previousLevelBest) {
+          if (Number.isFinite(previousLevelBest)) {
+            acc.score -= previousLevelBest;
+          }
+          acc.score += score;
+          acc.levelScores.set(levelKey, score);
+        }
+
+        if (!acc.updated_at || (updatedAt && updatedAt < acc.updated_at)) {
+          acc.updated_at = updatedAt;
+        }
+      }
+    }
+
+    const totals = Array.from(totalsByNick.values()).map(({ nickname, score, updated_at }) => ({
+      nickname,
+      score,
+      updated_at,
+    }));
+
+    return sortLeaderboardEntries(totals);
   }
 
   function upsertLocalLeaderboardEntry(weekKey, level, nickname, score) {
@@ -859,7 +877,8 @@
       : (store[weekKey] && typeof store[weekKey] === "object" ? { ...store[weekKey] } : {});
     const entries = Array.isArray(existingWeekBucket[bucketKey]) ? existingWeekBucket[bucketKey].slice() : [];
     const updatedAt = new Date().toISOString();
-    const existingIndex = entries.findIndex((entry) => String(entry.nickname || "") === nickname);
+    const normalizedNickname = String(nickname).toLowerCase();
+    const existingIndex = entries.findIndex((entry) => String(entry.nickname || "").toLowerCase() === normalizedNickname);
 
     if (existingIndex >= 0) {
       const existingScore = Number(entries[existingIndex].score ?? 0);
@@ -881,7 +900,7 @@
     existingWeekBucket[bucketKey] = sortLeaderboardEntries(entries);
     store[weekKey] = existingWeekBucket;
     writeLocalLeaderboardStore(store);
-    return store[weekKey][bucketKey];
+    return getLocalLeaderboardEntries(weekKey);
   }
 
   function renderLeaderboard(entries = []) {
@@ -892,7 +911,7 @@
     if (!uniqueEntries.length) {
       const item = document.createElement("li");
       item.className = "leaderboard-entry leaderboard-empty";
-      item.textContent = "Brak wyników w tym tygodniu dla tego poziomu.";
+      item.textContent = "Brak wynikow w tym tygodniu.";
       leaderboardList.appendChild(item);
       renderHudLeaderboard([]);
       return;
@@ -960,7 +979,7 @@
       hudLeaderboardList.classList.add("is-empty");
       const item = document.createElement("li");
       item.className = "hud-leaderboard-item is-empty";
-      item.textContent = "Brak wynikow dla tego poziomu.";
+      item.textContent = "Brak wynikow w tym tygodniu.";
       hudLeaderboardList.appendChild(item);
       return;
     }
@@ -994,10 +1013,10 @@
     leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey, state.leaderboardLevel);
 
     state.leaderboardLoading = true;
-    setLeaderboardStatus("Ładowanie tabeli...", true);
+    setLeaderboardStatus("Ĺadowanie tabeli...", true);
 
     try {
-      const response = await fetchLeaderboardJson(`/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}&level=${encodeURIComponent(state.leaderboardLevel)}`, {
+      const response = await fetchLeaderboardJson(`/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -1012,7 +1031,7 @@
       const entries = Array.isArray(payload.entries) ? payload.entries : [];
       state.leaderboardEntries = entries;
       renderLeaderboard(entries);
-      setLeaderboardStatus(entries.length ? "Wyniki online dla tego poziomu są gotowe." : "Na ten tydzień i poziom jeszcze nikt nie dodał wyniku.", false);
+      setLeaderboardStatus(entries.length ? "Wyniki online (suma poziomow) sa gotowe." : "Na ten tydzien nikt jeszcze nie dodal wyniku.", false);
     } catch (error) {
       console.error("Leaderboard load failed:", error);
       const localEntries = getLocalLeaderboardEntries(state.leaderboardWeekKey, state.leaderboardLevel);
@@ -1020,8 +1039,8 @@
       renderLeaderboard(localEntries);
       setLeaderboardStatus(
         localEntries.length
-          ? "Backend leaderboardu jest chwilowo niedostępny. Pokazuję zapis lokalny dla tego poziomu."
-          : "Backend leaderboardu jest chwilowo niedostępny. Możesz zapisać wynik lokalnie.",
+          ? "Backend leaderboardu jest chwilowo niedostepny. Pokazuje zapis lokalny (suma poziomow)."
+          : "Backend leaderboardu jest chwilowo niedostepny. Mozesz zapisac wynik lokalnie.",
         false
       );
     } finally {
@@ -1047,7 +1066,7 @@
     state.leaderboardLevel = clampLevel(state.level || state.leaderboardLevel);
     const scoreToSubmit = isLevelClear ? state.levelCompleteScore : state.score;
     state.leaderboardSubmissionScore = scoreToSubmit;
-    setLeaderboardStatus(isLevelClear ? "Zapisywanie poziomu..." : "Zapisywanie wyniku...", true);
+    setLeaderboardStatus("Zapisywanie wyniku do rankingu tygodnia...", true);
 
     try {
       const response = await fetchLeaderboardJson("/submit", {
@@ -1073,19 +1092,14 @@
       state.leaderboardEntries = entries;
       renderLeaderboard(entries);
       leaderboardName.value = nickname;
-      setLeaderboardStatus(isLevelClear ? "Poziom zapisany. Tabela odświeżona." : "Wynik zapisany. Tabela odświeżona.", false);
+      setLeaderboardStatus("Wynik zapisany. Ranking sumaryczny odswiezony.", false);
     } catch (error) {
       console.error("Leaderboard submit failed:", error);
       const localEntries = upsertLocalLeaderboardEntry(state.leaderboardWeekKey, state.leaderboardLevel, nickname, scoreToSubmit);
       state.leaderboardEntries = localEntries;
       renderLeaderboard(localEntries);
       leaderboardName.value = nickname;
-      setLeaderboardStatus(
-        isLevelClear
-          ? "Poziom zapisany lokalnie. Backend leaderboardu jest chwilowo niedostępny."
-          : "Wynik zapisany lokalnie dla tego poziomu. Backend leaderboardu jest chwilowo niedostępny.",
-        false
-      );
+      setLeaderboardStatus("Wynik zapisany lokalnie. Backend leaderboardu jest chwilowo niedostepny.", false);
     }
   }
 
@@ -1170,7 +1184,7 @@
     const bossMode = state.mode === "playing" && state.phase === "boss";
     bossActionButton.hidden = !bossMode;
     bossActionButton.disabled = !bossMode || state.attackCooldown > 0;
-    bossActionButton.textContent = state.attackCooldown > 0 ? "Chwila..." : "Kop / Książka";
+    bossActionButton.textContent = state.attackCooldown > 0 ? "Chwila..." : "Kop / KsiÄ…ĹĽka";
   }
 
   function clearBattlefield() {
@@ -1349,7 +1363,7 @@
       h: Math.round(28 * PLAYER_BOOK_SHOT_SCALE),
       life: 1.4,
     });
-    addPopup("KSIĄŻKA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
+    addPopup("KSIÄ„Ĺ»KA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
     state.flash = Math.max(state.flash, 0.1);
   }
 
@@ -1472,7 +1486,7 @@
   function startGame() {
     ensureAudioContext();
     resetRound();
-    showBanner("Złap dyplomy, zanim uciekną!", 1.2);
+    showBanner("ZĹ‚ap dyplomy, zanim ucieknÄ…!", 1.2);
     playSound("start");
   }
 
@@ -1630,7 +1644,7 @@
     state.pkaStorm = 3;
     state.flash = Math.max(state.flash, 0.28);
     state.shake = Math.max(state.shake, 0.22);
-    showBanner("ŻADNEJ AKREDYTACJI!", 1.15);
+    showBanner("Ĺ»ADNEJ AKREDYTACJI!", 1.15);
     playSound("pka-cancel");
   }
 
@@ -2516,7 +2530,7 @@
     ctx.fillStyle = PALETTE.cream;
     ctx.font = "bold 16px 'Courier New', monospace";
     ctx.textAlign = "center";
-    ctx.fillText("ŁAPÓWKA", x, y + h * 0.62);
+    ctx.fillText("ĹAPĂ“WKA", x, y + h * 0.62);
   }
 
   function drawBookShot(item) {
@@ -2655,8 +2669,8 @@
     };
 
     drawHeadlineColumn(columnX1, ["KONSOLE ZA ZDROWIE?", "LECZENIE XP CORAZ", "POPULARNIEJSZE"]);
-    drawHeadlineColumn(columnX2, ["MIASTO-BLOK 12", "MIESZKAŃCY CHCĄ", "REALNYCH NPC"]);
-    drawHeadlineColumn(columnX3, ["HAKERZY W RADZIE?", "KTO PISAŁ UCHWAŁY", "TO NIKT NIE WIE"]);
+    drawHeadlineColumn(columnX2, ["MIASTO-BLOK 12", "MIESZKAĹCY CHCÄ„", "REALNYCH NPC"]);
+    drawHeadlineColumn(columnX3, ["HAKERZY W RADZIE?", "KTO PISAĹ UCHWAĹY", "TO NIKT NIE WIE"]);
 
     ctx.fillStyle = "#d61b27";
     ctx.fillRect(columnX2 - 3, y0 + 3, 1, topBandH - 6);
@@ -2694,9 +2708,9 @@
     ctx.font = `bold ${Math.max(4, Math.round(ww * 0.07))}px 'Courier New', monospace`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("NR 07 (427) + 26.05.2087  *  CENA: 5 KREDYTÓW", x0 + 4, y0 + topBandH + 2);
+    ctx.fillText("NR 07 (427) + 26.05.2087  *  CENA: 5 KREDYTĂ“W", x0 + 4, y0 + topBandH + 2);
     ctx.textAlign = "right";
-    ctx.fillText("TYGODNIK NIEZALEŻNY", x0 + ww - 4, y0 + topBandH + 2);
+    ctx.fillText("TYGODNIK NIEZALEĹ»NY", x0 + ww - 4, y0 + topBandH + 2);
 
     ctx.fillStyle = "#ececec";
     ctx.fillRect(x0 + 2, photoTop, ww - 4, photoH);
@@ -2746,14 +2760,14 @@
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("SEZON WYBORCZY 2087:", x0 + 6, bodyBottom - footerH);
-    ctx.fillText("KTO KUPI TWOJE GŁOSY?", x0 + 6, bodyBottom - footerH + 6);
+    ctx.fillText("KTO KUPI TWOJE GĹOSY?", x0 + 6, bodyBottom - footerH + 6);
     ctx.fillStyle = "#d31822";
     ctx.fillRect(x0 + 4, bodyBottom - footerH - 4, 8, 2);
     ctx.fillRect(x0 + 4, bodyBottom - footerH + 14, 4, 4);
     ctx.fillStyle = "#f5f2e7";
     ctx.font = `bold ${Math.max(4, Math.round(ww * 0.065))}px 'Courier New', monospace`;
-    ctx.fillText("PODATKI W GÓRĘ, NASTROJE W DÓŁ", x0 + 12, bodyBottom - footerH + 15);
-    ctx.fillText("PORADNIK: JAK PRZETRWAĆ AKTUALIZACJĘ?", x0 + 12, bodyBottom - footerH + 21);
+    ctx.fillText("PODATKI W GĂ“RÄ, NASTROJE W DĂ“Ĺ", x0 + 12, bodyBottom - footerH + 15);
+    ctx.fillText("PORADNIK: JAK PRZETRWAÄ† AKTUALIZACJÄ?", x0 + 12, bodyBottom - footerH + 21);
   }
 
   function drawRenataBoss(boss) {
@@ -3170,7 +3184,7 @@
 
         ctx.fillStyle = "rgba(255, 244, 214, 0.72)";
         ctx.font = "bold 11px 'Courier New', monospace";
-        ctx.fillText("Za chwilę wjeżdża boss", view.width / 2, panelY + 116);
+        ctx.fillText("Za chwilÄ™ wjeĹĽdĹĽa boss", view.width / 2, panelY + 116);
         ctx.fillText(`Wynik poziomu: ${state.levelCompleteScore}`, view.width / 2, panelY + 132);
       } else {
         ctx.fillText(`POZIOM ${state.level} ZALICZONY`, view.width / 2, panelY + 22);
@@ -3182,11 +3196,11 @@
         ctx.fillStyle = PALETTE.accent;
         ctx.font = "bold 13px 'Courier New', monospace";
         ctx.fillText(`Wynik poziomu: ${state.levelCompleteScore}`, view.width / 2, panelY + 88);
-        ctx.fillText(`Za ${countdown} s zacznie się kolejny level`, view.width / 2, panelY + 108);
+        ctx.fillText(`Za ${countdown} s zacznie siÄ™ kolejny level`, view.width / 2, panelY + 108);
 
         ctx.fillStyle = "rgba(255, 244, 214, 0.72)";
         ctx.font = "bold 10px 'Courier New', monospace";
-        ctx.fillText(state.level >= MAX_LEVEL ? "To był już finał" : `Przygotuj się na poziom ${state.level + 1}`, view.width / 2, panelY + 128);
+        ctx.fillText(state.level >= MAX_LEVEL ? "To byĹ‚ juĹĽ finaĹ‚" : `Przygotuj siÄ™ na poziom ${state.level + 1}`, view.width / 2, panelY + 128);
       }
     }
   }
@@ -3294,7 +3308,7 @@
           title: "KOLEGUM HUMANOOB",
           text,
         });
-        shareStatus.textContent = "Gotowe do udostępnienia.";
+        shareStatus.textContent = "Gotowe do udostÄ™pnienia.";
         return;
       }
     } catch {
@@ -3327,7 +3341,7 @@
       copied = false;
     }
     document.body.removeChild(area);
-    shareStatus.textContent = copied ? "Wynik skopiowany do schowka." : `Skopiuj ręcznie: ${text}`;
+    shareStatus.textContent = copied ? "Wynik skopiowany do schowka." : `Skopiuj rÄ™cznie: ${text}`;
   }
 
   function handleKeyboard(event) {
@@ -3509,7 +3523,7 @@
     if (rankingButton) {
       rankingButton.addEventListener("click", () => {
         if (state.mode !== "gameover" && state.mode !== "levelclear") {
-          showBanner("Ranking otwiera się po zakończeniu poziomu lub gry.", 1.1);
+          showBanner("Ranking otwiera siÄ™ po zakoĹ„czeniu poziomu lub gry.", 1.1);
           return;
         }
         state.leaderboardLevel = clampLevel(state.level);
@@ -3547,7 +3561,7 @@
     resizeCanvas();
     syncHud();
     renderLeaderboard([]);
-    setLeaderboardStatus("Wpisz login i zapisz wynik po zakończeniu gry lub poziomu.", false);
+    setLeaderboardStatus("Wpisz login i zapisz wynik po zakoĹ„czeniu gry lub poziomu.", false);
     setOverlay("start");
     wireInput();
     wirePauseHandling();
@@ -3568,3 +3582,9 @@
 
   boot();
 })();
+
+
+
+
+
+
