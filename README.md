@@ -88,6 +88,10 @@ Binding bazy D1:
 
 Frontend najpierw probuje `\/api` na tym samym hoscie, potem meta tag `humanum-leaderboard-api`, a na koncu publiczny fallback worker.
 
+Aktualny publiczny endpoint API leaderboardu:
+
+- `https://humanum-api.felix-7d1.workers.dev`
+
 ## Testy
 
 Uruchom lokalnie:
