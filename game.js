@@ -186,6 +186,8 @@
     leaderboardLoading: false,
     leaderboardExpanded: false,
     resultKind: "",
+    endGameReason: "",
+    gameoverTitle: "Koniec gry",
     leaderboardSubmissionScore: 0,
     player: {
       lane: Math.floor(LANE_COUNT / 2),
@@ -714,7 +716,7 @@
       resultLabelPrefix.textContent = prefix;
     }
 
-    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : "Koniec gry";
+    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : (state.gameoverTitle || "Koniec gry");
     finalScore.textContent = String(scoreValue);
     finalBest.textContent = String(levelClear ? scoreValue : state.bestScore);
     restartButton.textContent = levelClear
@@ -1044,6 +1046,8 @@
     state.phase = "collect";
     state.transitionKind = null;
     state.resultKind = "";
+    state.endGameReason = "";
+    state.gameoverTitle = "Koniec gry";
     state.timeLeft = ROUND_DURATION;
     state.levelProgress = 0;
     state.levelGoal = getLevelGoal(state.level);
@@ -1127,7 +1131,7 @@
     state.transitionKind = null;
     setOverlay(null);
     if (state.level >= MAX_LEVEL) {
-      endGame();
+      endGame("final-level-finish");
       return;
     }
     beginCollectPhase(state.level + 1);
@@ -1161,7 +1165,7 @@
     state.levelCompleteScore = state.score - state.levelScoreStart;
     playSound("boss-clear");
     if (state.level >= MAX_LEVEL) {
-      endGame();
+      endGame("final-boss");
       return;
     }
     showBanner(`Poziom ${state.level} zaliczony`, 1.1);
@@ -1246,7 +1250,7 @@
     playSound("hurt");
     if (state.playerHp <= 0) {
       showBanner("Renata wygrała", 1.1);
-      endGame();
+      endGame("player-dead");
     }
   }
 
@@ -1277,6 +1281,8 @@
     state.attackCooldown = 0;
     state.transitionTimer = 0;
     state.resultKind = "";
+    state.endGameReason = "";
+    state.gameoverTitle = "Koniec gry";
     state.leaderboardSubmissionScore = state.score;
     state.popups.length = 0;
     state.flash = 0;
@@ -1308,11 +1314,37 @@
     playSound("start");
   }
 
-  function endGame() {
-    logFlow("endGame", { level: state.level, score: state.score });
+  function endGame(reason = "unknown") {
+    if (DEV_MODE) {
+      console.warn("[ENDGAME CALL]", {
+        mode: state.mode,
+        phase: state.phase,
+        level: state.level,
+        timeLeft: state.timeLeft,
+        transitionKind: state.transitionKind,
+        boss: Boolean(state.boss),
+        reason,
+      });
+    }
+
+    if (state.phase === "collect" && state.level < MAX_LEVEL && state.timeLeft <= 0) {
+      if (DEV_MODE) {
+        console.warn("[ENDGAME GUARD] collect timer reached zero before boss intro", {
+          level: state.level,
+          timeLeft: state.timeLeft,
+          reason,
+        });
+      }
+      beginBossIntroPhase();
+      return;
+    }
+
+    logFlow("endGame", { level: state.level, score: state.score, reason });
     state.mode = "gameover";
     state.phase = "results";
     state.resultKind = "gameover";
+    state.endGameReason = reason;
+    state.gameoverTitle = reason === "player-dead" ? "Renata wygraĹ‚a" : "Koniec gry";
     if (state.score > state.bestScore) {
       state.bestScore = state.score;
       saveBestScore(state.bestScore);
@@ -1323,7 +1355,7 @@
     setLeaderboardExpanded(false);
     syncResultOverlay("gameover");
     renderLeaderboard([]);
-    showBanner("Koniec gry", 1.8);
+    showBanner(state.gameoverTitle, 1.8);
     playSound("gameover");
     syncHud();
     syncBossActionButton();

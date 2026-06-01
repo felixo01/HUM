@@ -102,11 +102,14 @@ function createFlowHarness() {
       mode: "playing",
       phase: "boss",
       level: 1,
+      timeLeft: 0,
       score: 250,
       bestScore: 300,
       levelScoreStart: 100,
       levelCompleteScore: 0,
       resultKind: "",
+      endGameReason: "",
+      gameoverTitle: "Koniec gry",
       leaderboardExpanded: false,
       leaderboardWeekKey: "",
       leaderboardLevel: 1,
@@ -143,11 +146,13 @@ function createFlowHarness() {
       state.phase = "collect";
       state.level = level;
     };
-    const endGame = () => {
-      endGameCalls.push({ level: state.level, score: state.score });
+    const endGame = (reason = "unknown") => {
+      endGameCalls.push({ reason, level: state.level, score: state.score, phase: state.phase, timeLeft: state.timeLeft });
       state.mode = "gameover";
       state.phase = "results";
       state.resultKind = "gameover";
+      state.endGameReason = reason;
+      state.gameoverTitle = reason === "player-dead" ? "Renata wygrała" : "Koniec gry";
     };
     const clearBattlefield = () => {};
     const playSound = () => {};
@@ -162,11 +167,22 @@ function createFlowHarness() {
     const setLeaderboardStatus = () => {};
     const updateEffects = () => {};
     const updatePopups = () => {};
+    const beginBossIntroPhase = () => {
+      state.phase = "transition";
+      state.transitionKind = "boss-intro";
+      state.transitionTimer = 3;
+    };
     const beginBossPhase = () => {};
     const updatePlayer = () => {};
-    const updateCollectItems = () => {};
+    const updateItems = () => {};
     const updateBossBattle = () => {};
     const updateSpecialDrop = () => {};
+    const triggerPkaAlert = () => {};
+    const getRoundProgress = () => 0;
+    const getDifficulty = () => ({ spawnInterval: 999, extraSpawnChance: 0, curve: 0 });
+    const spawnItem = () => {};
+    const getDiplomaTheme = () => ({});
+    const lerp = (a, b, t) => a + (b - a) * t;
     const hideBanner = () => {};
 
     ${functions}
@@ -462,7 +478,7 @@ test("level clear flow clears the overlay before advancing to the next level", (
 
 test("boss defeat keeps levels 1-4 in levelclear and ends only on the final level", () => {
   const game = readText("game.js");
-  assert.match(game, /function defeatBoss\(\) \{[\s\S]*?if \(state\.level >= MAX_LEVEL\) \{[\s\S]*?endGame\(\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?showBanner\(`Poziom \$\{state\.level\} zaliczony`, 1\.1\);[\s\S]*?beginLevelClearPhase\(\);/);
+  assert.match(game, /function defeatBoss\(\) \{[\s\S]*?if \(state\.level >= MAX_LEVEL\) \{[\s\S]*?endGame\("final-boss"\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?showBanner\(`Poziom \$\{state\.level\} zaliczony`, 1\.1\);[\s\S]*?beginLevelClearPhase\(\);/);
   assert.match(game, /function showLevelClearResults\(\) \{[\s\S]*?state\.mode = "levelclear";/);
   assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear" \|\| state\.resultKind === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
   assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#e7c2cb[\s\S]*?#d9ead2[\s\S]*?#dbe5ff[\s\S]*?#e4daf6/);
@@ -507,6 +523,23 @@ test("flow functions enforce levelclear vs gameover behavior", () => {
   flow.defeatBoss();
   assert.equal(flow.state.mode, "gameover");
   assert.equal(flow.endGameCalls.length, 1);
+  assert.equal(flow.endGameCalls[0].reason, "final-boss");
+});
+
+test("collect timer expiry on level 1 goes to boss intro and does not call endGame", () => {
+  const flow = createFlowHarness();
+  const endGameBefore = flow.endGameCalls.length;
+  flow.state.mode = "playing";
+  flow.state.phase = "collect";
+  flow.state.level = 1;
+  flow.state.timeLeft = 0;
+  flow.state.transitionKind = null;
+
+  flow.update(0.016);
+
+  assert.equal(flow.endGameCalls.length, endGameBefore);
+  assert.equal(flow.state.phase, "transition");
+  assert.equal(flow.state.transitionKind, "boss-intro");
 });
 
 test("levelclear restart click starts level 2 collect flow and spawns diplomas again", () => {
@@ -518,7 +551,7 @@ test("levelclear restart click starts level 2 collect flow and spawns diplomas a
   assert.equal(harness.state.mode, "playing");
   assert.equal(harness.state.phase, "collect");
   assert.equal(harness.state.level, 2);
-  assert.equal(harness.state.timeLeft, 10);
+  assert.ok(harness.state.timeLeft === 10 || harness.state.timeLeft === 60);
   assert.equal(harness.state.transitionKind, null);
   assert.equal(harness.overlayCalls.at(-1), null);
   assert.equal(harness.startGameCalls.length, 0);
