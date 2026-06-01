@@ -2,7 +2,8 @@
   const STORAGE_KEY = "humanum-best-score";
   const LOCAL_LEADERBOARD_KEY = "humanum-local-leaderboard";
   const LEADERBOARD_META_NAME = "humanum-leaderboard-api";
-  const LEADERBOARD_API_FALLBACK = "https://humanumleaderboard.felix-7d1.workers.dev";
+  const LEADERBOARD_API_FALLBACK = "https://humanum-api.felix-7d1.workers.dev";
+  const BUILD_VERSION = "1.7.0-1e5f067";
   const MAX_LEVEL = 5;
   const DURATION = 60;
   const DEV_MODE = new URLSearchParams(window.location.search).get("dev") === "1";
@@ -58,6 +59,7 @@
   const leaderboardSubmit = document.getElementById("leaderboard-submit");
   const leaderboardList = document.getElementById("leaderboard-list");
   const leaderboardStatus = document.getElementById("leaderboard-status");
+  const buildVersion = document.getElementById("build-version");
   const startButton = document.getElementById("start-button");
   const restartButton = document.getElementById("restart-button");
   const shareButton = document.getElementById("share-button");
@@ -124,7 +126,7 @@
     },
   };
 
-  const BOSS_HP_BY_LEVEL = [6, 8, 10, 12, 15];
+  const BOSS_HP_BY_LEVEL = [6, 9, 12, 16, 21];
   const BOSS_ATTACK_INTERVAL_BY_LEVEL = [1.45, 1.25, 1.1, 0.95, 0.82];
   const BOOK_COOLDOWN_BY_LEVEL = [0.45, 0.48, 0.52, 0.56, 0.6];
 
@@ -403,15 +405,18 @@
 
   function getDifficulty(progress, level = state.level) {
     const curve = Math.pow(progress, 1.35);
-    const levelBias = clamp((level - 1) / Math.max(1, MAX_LEVEL - 1), 0, 1) * 0.42;
+    const levelStep = clamp((level - 1) / Math.max(1, MAX_LEVEL - 1), 0, 1);
+    const levelBias = levelStep * 0.42;
     const mix = clamp(curve * 0.72 + levelBias, 0, 1);
+    const diplomaSpeedLevelMultiplier = lerp(1, 1.42, levelStep);
+    const spawnIntervalLevelMultiplier = lerp(1, 0.72, levelStep);
     return {
       progress,
       curve: mix,
-      diplomaSpeed: lerp(128, 305, mix),
+      diplomaSpeed: lerp(128, 305, mix) * diplomaSpeedLevelMultiplier,
       diplomaSpeedJitter: lerp(0.18, 0.12, mix),
-      spawnInterval: lerp(0.98, 0.38, mix),
-      extraSpawnChance: lerp(0.08, 0.21, mix),
+      spawnInterval: lerp(0.98, 0.38, mix) * spawnIntervalLevelMultiplier,
+      extraSpawnChance: lerp(0.08, 0.21, mix) + levelStep * 0.05,
       pkaDelayMin: lerp(15, 9, mix),
       pkaDelayMax: lerp(21, 14, mix),
       pkaSpeed: lerp(280, 440, mix),
@@ -441,10 +446,10 @@
   function getDiplomaTheme(level) {
     const themes = [
       { body: PALETTE.beigeSoft, stripe: PALETTE.gold, text: PALETTE.navyDark, accent: PALETTE.beige },
-      { body: "#e7c2cb", stripe: "#7b1731", text: "#2f1121", accent: "#f7d8df" },
-      { body: "#d9ead2", stripe: "#2d6b45", text: "#183523", accent: "#f2fbeb" },
-      { body: "#dbe5ff", stripe: "#295d95", text: "#112841", accent: "#f4f8ff" },
-      { body: "#e4daf6", stripe: "#6f3da0", text: "#291243", accent: "#fbf7ff" },
+      { body: "#ffe8a6", stripe: "#d9a404", text: "#5a4100", accent: "#fff3c9" },
+      { body: "#d8e8ff", stripe: "#2f63cc", text: "#15316a", accent: "#eef5ff" },
+      { body: "#ead8ff", stripe: "#7b38bd", text: "#35135a", accent: "#f5ecff" },
+      { body: "#ffd7d7", stripe: "#c91515", text: "#5a0f0f", accent: "#ffeded" },
     ];
 
     return themes[clamp(level - 1, 0, themes.length - 1)];
@@ -2177,6 +2182,28 @@
     drawShadow(x, y + h, w, 12, 0.24);
 
     if (drawAssetSprite("diploma", x, y + h / 2, w, h)) {
+      if (state.level === 1) {
+        drawDiplomaCancelOverlay(item, x, y, w, h);
+        return;
+      }
+      const x0 = snap4(x - w / 2);
+      const y0 = snap4(y);
+      const ww = snap4(w);
+      const hh = snap4(h);
+      ctx.save();
+      ctx.globalAlpha = 0.36;
+      ctx.fillStyle = theme.body;
+      ctx.fillRect(x0, y0, ww, hh);
+      ctx.globalAlpha = 0.62;
+      ctx.fillStyle = theme.stripe;
+      ctx.fillRect(x0, y0, 8, hh);
+      ctx.globalAlpha = 0.42;
+      ctx.fillStyle = theme.accent;
+      ctx.fillRect(x0 + 10, y0 + 8, ww - 16, 4);
+      ctx.fillRect(x0 + 10, y0 + 20, ww - 20, 4);
+      ctx.fillRect(x0 + 10, y0 + 32, ww - 14, 4);
+      ctx.fillRect(x0 + 10, y0 + 44, ww - 24, 4);
+      ctx.restore();
       drawDiplomaCancelOverlay(item, x, y, w, h);
       return;
     }
@@ -3319,6 +3346,9 @@
   }
 
   function boot() {
+    if (buildVersion) {
+      buildVersion.textContent = `v${BUILD_VERSION}`;
+    }
     void preloadArtAssets();
     resizeCanvas();
     syncHud();
