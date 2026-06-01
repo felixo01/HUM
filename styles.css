@@ -67,6 +67,15 @@ body::before {
   gap: 12px;
 }
 
+.build-version {
+  margin: 2px 2px 0;
+  text-align: right;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 244, 214, 0.62);
+  text-transform: uppercase;
+}
+
 .topbar {
   display: flex;
   flex-direction: column;
@@ -90,6 +99,7 @@ body::before {
   letter-spacing: 0.06em;
   line-height: 0.95;
   text-transform: uppercase;
+  color: var(--ink);
   text-shadow:
     0 2px 0 #000,
     0 4px 0 rgba(0, 0, 0, 0.45);
@@ -157,6 +167,95 @@ body::before {
 .level-strip strong {
   font-size: 0.98rem;
   color: var(--accent);
+}
+
+.hud-leaderboard-strip {
+  align-self: center;
+  width: min(100%, 480px);
+  margin: 0;
+  padding: 8px 10px 8px;
+  background: linear-gradient(180deg, rgba(12, 28, 48, 0.94), rgba(8, 18, 34, 0.94));
+  border: 1px solid rgba(255, 244, 214, 0.2);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 244, 214, 0.08);
+  overflow: hidden;
+}
+
+.hud-leaderboard-title {
+  margin: 0 0 6px;
+  font-size: 0.67rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 214, 0.75);
+}
+
+.hud-leaderboard-viewport {
+  width: 100%;
+  overflow: hidden;
+}
+
+.hud-leaderboard-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  width: max-content;
+  min-width: 100%;
+  padding-right: 14px;
+  animation: hud-leaderboard-marquee 22s linear infinite;
+  will-change: transform;
+}
+
+.hud-leaderboard-list.is-empty {
+  animation: none;
+}
+
+.hud-leaderboard-item {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(5, 12, 22, 0.7);
+  border: 1px solid rgba(255, 244, 214, 0.12);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+  flex: 0 0 auto;
+}
+
+.hud-leaderboard-item.is-empty {
+  display: block;
+  color: var(--accent-2);
+  text-align: center;
+  font-style: italic;
+}
+
+.hud-leaderboard-rank {
+  color: var(--accent);
+  font-weight: 700;
+  min-width: 2em;
+}
+
+.hud-leaderboard-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-leaderboard-score {
+  color: var(--accent-2);
+  font-weight: 700;
+}
+
+@keyframes hud-leaderboard-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .game-frame {
@@ -489,6 +588,10 @@ button:focus-visible {
   }
 
   .level-strip {
+    width: 100%;
+  }
+
+  .hud-leaderboard-strip {
     width: 100%;
   }
 
