@@ -1112,7 +1112,7 @@
     leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
 
     state.leaderboardLoading = true;
-    setLeaderboardStatus("Ĺadowanie tabeli...", true);
+    setLeaderboardStatus("Ładowanie tabeli...", true);
 
     try {
       const entries = await loadTotalLeaderboardEntriesOnline(state.leaderboardWeekKey);
@@ -1450,7 +1450,7 @@
       h: Math.round(28 * PLAYER_BOOK_SHOT_SCALE),
       life: 1.4,
     });
-    addPopup("KSIÄ„Ĺ»KA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
+    addPopup("KSIĄŻKA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
     state.flash = Math.max(state.flash, 0.1);
   }
 
@@ -1573,7 +1573,7 @@
   function startGame() {
     ensureAudioContext();
     resetRound();
-    showBanner("ZĹ‚ap dyplomy, zanim ucieknÄ…!", 1.2);
+    showBanner("Złap dyplomy, zanim uciekną!", 1.2);
     playSound("start");
   }
 
@@ -1731,7 +1731,7 @@
     state.pkaStorm = 3;
     state.flash = Math.max(state.flash, 0.28);
     state.shake = Math.max(state.shake, 0.22);
-    showBanner("Ĺ»ADNEJ AKREDYTACJI!", 1.15);
+    showBanner("ŻADNEJ AKREDYTACJI!", 1.15);
     playSound("pka-cancel");
   }
 
@@ -2617,7 +2617,7 @@
     ctx.fillStyle = PALETTE.cream;
     ctx.font = "bold 16px 'Courier New', monospace";
     ctx.textAlign = "center";
-    ctx.fillText("ĹAPĂ“WKA", x, y + h * 0.62);
+    ctx.fillText("ŁAPÓWKA", x, y + h * 0.62);
   }
 
   function drawBookShot(item) {
@@ -2756,8 +2756,8 @@
     };
 
     drawHeadlineColumn(columnX1, ["KONSOLE ZA ZDROWIE?", "LECZENIE XP CORAZ", "POPULARNIEJSZE"]);
-    drawHeadlineColumn(columnX2, ["MIASTO-BLOK 12", "MIESZKAĹCY CHCÄ„", "REALNYCH NPC"]);
-    drawHeadlineColumn(columnX3, ["HAKERZY W RADZIE?", "KTO PISAĹ UCHWAĹY", "TO NIKT NIE WIE"]);
+    drawHeadlineColumn(columnX2, ["MIASTO-BLOK 12", "MIESZKAŃCY CHCĄ", "REALNYCH NPC"]);
+    drawHeadlineColumn(columnX3, ["HAKERZY W RADZIE?", "KTO PISAŁ UCHWAŁY", "TO NIKT NIE WIE"]);
 
     ctx.fillStyle = "#d61b27";
     ctx.fillRect(columnX2 - 3, y0 + 3, 1, topBandH - 6);
@@ -2797,7 +2797,7 @@
     ctx.textBaseline = "top";
     ctx.fillText("NR 07 (427) + 26.05.2087  *  CENA: 5 KREDYTĂ“W", x0 + 4, y0 + topBandH + 2);
     ctx.textAlign = "right";
-    ctx.fillText("TYGODNIK NIEZALEĹ»NY", x0 + ww - 4, y0 + topBandH + 2);
+    ctx.fillText("TYGODNIK NIEZALEŻNY", x0 + ww - 4, y0 + topBandH + 2);
 
     ctx.fillStyle = "#ececec";
     ctx.fillRect(x0 + 2, photoTop, ww - 4, photoH);
@@ -2847,14 +2847,14 @@
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("SEZON WYBORCZY 2087:", x0 + 6, bodyBottom - footerH);
-    ctx.fillText("KTO KUPI TWOJE GĹOSY?", x0 + 6, bodyBottom - footerH + 6);
+    ctx.fillText("KTO KUPI TWOJE GŁOSY?", x0 + 6, bodyBottom - footerH + 6);
     ctx.fillStyle = "#d31822";
     ctx.fillRect(x0 + 4, bodyBottom - footerH - 4, 8, 2);
     ctx.fillRect(x0 + 4, bodyBottom - footerH + 14, 4, 4);
     ctx.fillStyle = "#f5f2e7";
     ctx.font = `bold ${Math.max(4, Math.round(ww * 0.065))}px 'Courier New', monospace`;
-    ctx.fillText("PODATKI W GĂ“RÄ, NASTROJE W DĂ“Ĺ", x0 + 12, bodyBottom - footerH + 15);
-    ctx.fillText("PORADNIK: JAK PRZETRWAÄ† AKTUALIZACJÄ?", x0 + 12, bodyBottom - footerH + 21);
+    ctx.fillText("PODATKI W GÓRĘ, NASTROJE W DÓŁ", x0 + 12, bodyBottom - footerH + 15);
+    ctx.fillText("PORADNIK: JAK PRZETRWAĆ AKTUALIZACJĘ?", x0 + 12, bodyBottom - footerH + 21);
   }
 
   function drawRenataBoss(boss) {
@@ -3271,7 +3271,7 @@
 
         ctx.fillStyle = "rgba(255, 244, 214, 0.72)";
         ctx.font = "bold 11px 'Courier New', monospace";
-        ctx.fillText("Za chwilÄ™ wjeĹĽdĹĽa boss", view.width / 2, panelY + 116);
+        ctx.fillText("Za chwilę wjeżdża boss", view.width / 2, panelY + 116);
         ctx.fillText(`Wynik poziomu: ${state.levelCompleteScore}`, view.width / 2, panelY + 132);
       } else {
         ctx.fillText(`POZIOM ${state.level} ZALICZONY`, view.width / 2, panelY + 22);
@@ -3283,11 +3283,11 @@
         ctx.fillStyle = PALETTE.accent;
         ctx.font = "bold 13px 'Courier New', monospace";
         ctx.fillText(`Wynik poziomu: ${state.levelCompleteScore}`, view.width / 2, panelY + 88);
-        ctx.fillText(`Za ${countdown} s zacznie siÄ™ kolejny level`, view.width / 2, panelY + 108);
+        ctx.fillText(`Za ${countdown} s zacznie się kolejny level`, view.width / 2, panelY + 108);
 
         ctx.fillStyle = "rgba(255, 244, 214, 0.72)";
         ctx.font = "bold 10px 'Courier New', monospace";
-        ctx.fillText(state.level >= MAX_LEVEL ? "To byĹ‚ juĹĽ finaĹ‚" : `Przygotuj siÄ™ na poziom ${state.level + 1}`, view.width / 2, panelY + 128);
+        ctx.fillText(state.level >= MAX_LEVEL ? "To był już finał" : `Przygotuj się na poziom ${state.level + 1}`, view.width / 2, panelY + 128);
       }
     }
   }
@@ -3395,7 +3395,7 @@
           title: "KOLEGUM HUMANOOB",
           text,
         });
-        shareStatus.textContent = "Gotowe do udostÄ™pnienia.";
+        shareStatus.textContent = "Gotowe do udostępnienia.";
         return;
       }
     } catch {
@@ -3428,7 +3428,7 @@
       copied = false;
     }
     document.body.removeChild(area);
-    shareStatus.textContent = copied ? "Wynik skopiowany do schowka." : `Skopiuj rÄ™cznie: ${text}`;
+    shareStatus.textContent = copied ? "Wynik skopiowany do schowka." : `Skopiuj ręcznie: ${text}`;
   }
 
   function handleKeyboard(event) {
@@ -3610,7 +3610,7 @@
     if (rankingButton) {
       rankingButton.addEventListener("click", () => {
         if (state.mode !== "gameover" && state.mode !== "levelclear") {
-          showBanner("Ranking otwiera siÄ™ po zakoĹ„czeniu poziomu lub gry.", 1.1);
+          showBanner("Ranking otwiera się po zakończeniu poziomu lub gry.", 1.1);
           return;
         }
         state.leaderboardLevel = clampLevel(state.level);
@@ -3648,7 +3648,7 @@
     resizeCanvas();
     syncHud();
     renderLeaderboard([]);
-    setLeaderboardStatus("Wpisz login i zapisz wynik po zakoĹ„czeniu gry lub poziomu.", false);
+    setLeaderboardStatus("Wpisz login i zapisz wynik po zakończeniu gry lub poziomu.", false);
     setOverlay("start");
     wireInput();
     wirePauseHandling();
