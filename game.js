@@ -1007,34 +1007,93 @@
     });
   }
 
+  function aggregateTotalLeaderboardEntries(perLevelEntries = []) {
+    const totalsByNick = new Map();
+
+    for (const pack of perLevelEntries) {
+      const level = clampLevel(pack?.level ?? 1);
+      const entries = Array.isArray(pack?.entries) ? pack.entries : [];
+      const levelKey = String(level);
+
+      for (const rawEntry of entries) {
+        const nickname = String(rawEntry?.nickname || "anon").trim();
+        const nickKey = nickname.toLowerCase();
+        const score = Number(rawEntry?.score ?? 0);
+        const updatedAt = String(rawEntry?.updated_at || "");
+
+        let acc = totalsByNick.get(nickKey);
+        if (!acc) {
+          acc = {
+            nickname,
+            score: 0,
+            updated_at: updatedAt,
+            levelScores: new Map(),
+          };
+          totalsByNick.set(nickKey, acc);
+        }
+
+        const previousLevelBest = Number(acc.levelScores.get(levelKey) ?? Number.NEGATIVE_INFINITY);
+        if (score > previousLevelBest) {
+          if (Number.isFinite(previousLevelBest)) {
+            acc.score -= previousLevelBest;
+          }
+          acc.score += score;
+          acc.levelScores.set(levelKey, score);
+        }
+
+        if (!acc.updated_at || (updatedAt && updatedAt < acc.updated_at)) {
+          acc.updated_at = updatedAt;
+        }
+      }
+    }
+
+    const totals = Array.from(totalsByNick.values()).map(({ nickname, score, updated_at }) => ({
+      nickname,
+      score,
+      updated_at,
+    }));
+
+    return sortLeaderboardEntries(totals);
+  }
+
+  async function loadTotalLeaderboardEntriesOnline(weekKey) {
+    const perLevelEntries = [];
+    for (let level = 1; level <= MAX_LEVEL; level += 1) {
+      const response = await fetchLeaderboardJson(
+        `/leaderboard?week=${encodeURIComponent(weekKey)}&level=${encodeURIComponent(level)}`,
+        {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const payload = await response.json();
+      perLevelEntries.push({
+        level,
+        entries: Array.isArray(payload.entries) ? payload.entries : [],
+      });
+    }
+    return aggregateTotalLeaderboardEntries(perLevelEntries);
+  }
+
   async function loadLeaderboard() {
     state.leaderboardWeekKey = getIsoWeekKey(new Date());
     state.leaderboardLevel = clampLevel(state.level || state.leaderboardLevel);
-    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey, state.leaderboardLevel);
+    leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey);
 
     state.leaderboardLoading = true;
     setLeaderboardStatus("Ĺadowanie tabeli...", true);
 
     try {
-      const response = await fetchLeaderboardJson(`/leaderboard?week=${encodeURIComponent(state.leaderboardWeekKey)}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const payload = await response.json();
-      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      const entries = await loadTotalLeaderboardEntriesOnline(state.leaderboardWeekKey);
       state.leaderboardEntries = entries;
       renderLeaderboard(entries);
       setLeaderboardStatus(entries.length ? "Wyniki online (suma poziomow) sa gotowe." : "Na ten tydzien nikt jeszcze nie dodal wyniku.", false);
     } catch (error) {
       console.error("Leaderboard load failed:", error);
-      const localEntries = getLocalLeaderboardEntries(state.leaderboardWeekKey, state.leaderboardLevel);
+      const localEntries = getLocalLeaderboardEntries(state.leaderboardWeekKey);
       state.leaderboardEntries = localEntries;
       renderLeaderboard(localEntries);
       setLeaderboardStatus(
@@ -1087,8 +1146,8 @@
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const payload = await response.json();
-      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      await response.json();
+      const entries = await loadTotalLeaderboardEntriesOnline(state.leaderboardWeekKey);
       state.leaderboardEntries = entries;
       renderLeaderboard(entries);
       leaderboardName.value = nickname;
