@@ -765,15 +765,43 @@
     leaderboardCard.classList.toggle("leaderboard-collapsed", !state.leaderboardExpanded);
     leaderboardToggle.setAttribute("aria-expanded", String(state.leaderboardExpanded));
     leaderboardToggleHint.textContent = state.leaderboardExpanded
-      ? "Kliknij, aby ukryc ranking"
-      : "Kliknij, aby otworzyc ranking";
+      ? "Kliknij, aby ukryć ranking"
+      : "Kliknij, aby otworzyć ranking";
+  }
+
+  function syncResultOverlay(kind = state.resultKind || state.mode) {
+    const levelClear = kind === "levelclear";
+    const scoreValue = levelClear ? state.levelCompleteScore : state.score;
+    const prefix = levelClear ? "Wynik poziomu:" : "Najlepszy wynik:";
+    const playerDead = !levelClear && state.endGameReason === "player-dead";
+    const gameoverTitle = playerDead ? "RENATA WYGRAŁA" : "KONIEC GRY";
+
+    if (resultLabelPrefix) {
+      resultLabelPrefix.textContent = prefix;
+    }
+
+    if (finalEyebrow) {
+      finalEyebrow.textContent = levelClear
+        ? "Poziom zaliczony"
+        : (playerDead ? "BOSS WYGRAŁ" : "KONIEC GRY");
+    }
+    finalTitle.textContent = levelClear ? `Poziom ${state.level} zaliczony` : gameoverTitle;
+    finalScore.textContent = String(scoreValue);
+    finalBest.textContent = String(levelClear ? scoreValue : state.bestScore);
+    restartButton.textContent = levelClear
+      ? (state.level >= MAX_LEVEL ? "Zakończ grę" : "Następny poziom")
+      : (playerDead ? "SPRÓBUJ PONOWNIE" : "Zagraj ponownie");
+    leaderboardSubmit.textContent = levelClear ? "Zapisz poziom" : "Zapisz wynik";
+    leaderboardToggleHint.textContent = state.leaderboardExpanded
+      ? "Kliknij, aby ukryć ranking"
+      : "Kliknij, aby otworzyć ranking";
     setLeaderboardStatus(
       levelClear
         ? "Wpisz login i zapisz wynik tego poziomu."
-        : "Wpisz login i zapisz wynik po zakoĹ„czeniu gry.",
+        : "Wpisz login i zapisz wynik po zakończeniu gry.",
       false
     );
-    shareStatus.textContent = playerDead ? "Trafi\u0142y Ci\u0119 NEWSMONTH-y" : "";
+    shareStatus.textContent = playerDead ? "Trafiły Cię NEWSMONTH-y" : "";
   }
 
   function readLocalLeaderboardStore() {
@@ -1243,7 +1271,7 @@
     const bossMode = state.mode === "playing" && state.phase === "boss";
     bossActionButton.hidden = !bossMode;
     bossActionButton.disabled = !bossMode || state.attackCooldown > 0;
-    bossActionButton.textContent = state.attackCooldown > 0 ? "Chwila..." : "Kop / KsiÄ…ĹĽka";
+    bossActionButton.textContent = state.attackCooldown > 0 ? "Chwila..." : "Kop / Książka";
   }
 
   function clearBattlefield() {
