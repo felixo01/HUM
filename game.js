@@ -1354,7 +1354,7 @@
     state.phase = "results";
     state.resultKind = "gameover";
     state.endGameReason = reason;
-    state.gameoverTitle = reason === "player-dead" ? "Renata wygraĹ‚a" : "Koniec gry";
+    state.gameoverTitle = reason === "player-dead" ? "Renata wygra\u0142a" : "Koniec gry";
     if (state.score > state.bestScore) {
       state.bestScore = state.score;
       saveBestScore(state.bestScore);
