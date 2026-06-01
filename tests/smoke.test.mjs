@@ -107,3 +107,11 @@ test("level clear flow clears the overlay before advancing to the next level", (
   assert.match(game, /function finishLevel\(\) \{[\s\S]*?setOverlay\(null\);[\s\S]*?beginCollectPhase\(state\.level \+ 1\);/);
   assert.match(game, /restartButton\.textContent = levelClear[\s\S]*?\? \(state\.level >= MAX_LEVEL \? "Zako\u0144cz gr\u0119" : "Nast\u0119pny poziom"\)/);
 });
+
+test("boss defeat keeps levels 1-4 in levelclear and ends only on the final level", () => {
+  const game = readText("game.js");
+  assert.match(game, /function defeatBoss\(\) \{[\s\S]*?if \(state\.level >= MAX_LEVEL\) \{[\s\S]*?endGame\(\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?showBanner\(`Poziom \$\{state\.level\} zaliczony`, 1\.1\);[\s\S]*?beginLevelClearPhase\(\);/);
+  assert.match(game, /function showLevelClearResults\(\) \{[\s\S]*?state\.mode = "levelclear";/);
+  assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
+  assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#e7c2cb[\s\S]*?#d9ead2[\s\S]*?#dbe5ff[\s\S]*?#e4daf6/);
+});

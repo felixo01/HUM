@@ -1134,8 +1134,12 @@
     state.score += bonus;
     addPopup(`+${bonus}`, view.width * 0.5, view.height * 0.18, PALETTE.goldSoft);
     state.levelCompleteScore = state.score - state.levelScoreStart;
-    showBanner(`Poziom ${state.level} zaliczony`, 1.1);
     playSound("boss-clear");
+    if (state.level >= MAX_LEVEL) {
+      endGame();
+      return;
+    }
+    showBanner(`Poziom ${state.level} zaliczony`, 1.1);
     beginLevelClearPhase();
   }
 
