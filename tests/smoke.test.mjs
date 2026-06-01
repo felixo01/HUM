@@ -179,6 +179,7 @@ function createFlowHarness() {
     const updateBossBattle = () => {};
     const updateSpecialDrop = () => {};
     const triggerPkaAlert = () => {};
+    const scheduleNextPsychologiaDrop = () => {};
     const getRoundProgress = () => 0;
     const getDifficulty = () => ({ spawnInterval: 999, extraSpawnChance: 0, curve: 0 });
     const spawnItem = () => {};
@@ -324,6 +325,7 @@ function createNextLevelHarness() {
     const beginBossPhase = () => {};
     const showLevelClearResults = () => {};
     const triggerPkaAlert = () => {};
+    const scheduleNextPsychologiaDrop = () => {};
     const syncHud = () => {};
     const clearBattlefield = () => {
       state.items.length = 0;
@@ -383,7 +385,7 @@ test("game loop contains boss intro, per-level leaderboard and audio hooks", () 
   assert.match(game, /ASSET_RENDER_CONFIG/);
   assert.match(game, /imageSmoothingEnabled = false/);
   assert.match(game, /sourceCrop/);
-  assert.match(game, /assets\/player-student\.png/);
+  assert.match(game, /assets\/studencik-sheet\.png/);
   assert.match(game, /assets\/diploma\.png/);
   assert.match(game, /assets\/book\.png/);
   assert.match(game, /assets\/newsmonth\.png/);
@@ -483,7 +485,12 @@ test("boss defeat keeps levels 1-4 in levelclear and ends only on the final leve
   assert.match(game, /function defeatBoss\(\) \{[\s\S]*?if \(state\.level >= MAX_LEVEL\) \{[\s\S]*?endGame\("final-boss"\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?showBanner\(`Poziom \$\{state\.level\} zaliczony`, 1\.1\);[\s\S]*?beginLevelClearPhase\(\);/);
   assert.match(game, /function showLevelClearResults\(\) \{[\s\S]*?state\.mode = "levelclear";/);
   assert.match(game, /restartButton\.addEventListener\("click", \(\) => \{[\s\S]*?if \(state\.mode === "levelclear" \|\| state\.resultKind === "levelclear"\) \{[\s\S]*?finishLevel\(\);/);
-  assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#e7c2cb[\s\S]*?#d9ead2[\s\S]*?#dbe5ff[\s\S]*?#e4daf6/);
+  assert.match(game, /getDiplomaTheme\(level\) \{[\s\S]*?const themes = \[[\s\S]*?PALETTE\.beigeSoft[\s\S]*?#ffe8a6[\s\S]*?#d8e8ff[\s\S]*?#ead8ff[\s\S]*?#ffd7d7/);
+});
+
+test("level 1 diploma sprite is rendered without tint overlay while higher levels keep tint", () => {
+  const game = readText("game.js");
+  assert.match(game, /if \(drawAssetSprite\("diploma", x, y \+ h \/ 2, w, h\)\) \{[\s\S]*?if \(state\.level === 1\) \{[\s\S]*?drawDiplomaCancelOverlay\(item, x, y, w, h\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?ctx\.globalAlpha = 0\.36;[\s\S]*?ctx\.fillStyle = theme\.body;/);
 });
 
 test("flow functions enforce levelclear vs gameover behavior", () => {

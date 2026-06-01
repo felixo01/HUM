@@ -58,6 +58,7 @@
   const leaderboardName = document.getElementById("leaderboard-name");
   const leaderboardSubmit = document.getElementById("leaderboard-submit");
   const leaderboardList = document.getElementById("leaderboard-list");
+  const hudLeaderboardList = document.getElementById("hud-leaderboard-list");
   const leaderboardStatus = document.getElementById("leaderboard-status");
   const buildVersion = document.getElementById("build-version");
   const startButton = document.getElementById("start-button");
@@ -65,16 +66,22 @@
   const shareButton = document.getElementById("share-button");
   const AudioCtor = window.AudioContext || window.webkitAudioContext || null;
   const ART_ASSET_SOURCES = {
-    playerStudent: "assets/player-student.png",
+    cityBackdrop: "assets/background-city.png",
+    playerStudent: "assets/studencik-sheet.png",
     diploma: "assets/diploma.png",
     book: "assets/book.png",
     newsmonth: "assets/newsmonth.png",
     renataBoss: "assets/renata-boss.png",
+    psychologia: "assets/psychologia-freud.png",
     mba: "assets/MBA.png",
     pka: "assets/PKA.png",
     lapowka: "assets/lapowka.png",
   };
   const ASSET_RENDER_CONFIG = {
+    cityBackdrop: {
+      key: "cityBackdrop",
+      scale: 1,
+    },
     playerStudent: {
       key: "playerStudent",
       scale: 1.1,
@@ -100,7 +107,7 @@
     },
     newsmonth: {
       key: "newsmonth",
-      scale: 0.9,
+      scale: 1.04,
       rotate: true,
     },
     renataBoss: {
@@ -108,6 +115,11 @@
       scale: 1.25,
       offsetY: 0,
       bob: true,
+    },
+    psychologia: {
+      key: "psychologia",
+      scale: 1.44,
+      rotate: true,
     },
     mba: {
       key: "mba",
@@ -129,6 +141,18 @@
   const BOSS_HP_BY_LEVEL = [6, 9, 12, 16, 21];
   const BOSS_ATTACK_INTERVAL_BY_LEVEL = [1.45, 1.25, 1.1, 0.95, 0.82];
   const BOOK_COOLDOWN_BY_LEVEL = [0.45, 0.48, 0.52, 0.56, 0.6];
+  const PLAYER_BOOK_SHOT_SCALE = 1.7;
+  const PLAYER_SPRITE_FRAMES = {
+    idleSide: { x: 696, y: 38, width: 118, height: 268 },
+    idleFront: { x: 452, y: 36, width: 120, height: 270 },
+    runA: { x: 682, y: 345, width: 144, height: 261 },
+    runB: { x: 940, y: 343, width: 125, height: 263 },
+    runC: { x: 427, y: 344, width: 145, height: 262 },
+    attackA: { x: 683, y: 638, width: 125, height: 265 },
+    attackB: { x: 154, y: 940, width: 140, height: 262 },
+    celebrateA: { x: 404, y: 940, width: 168, height: 262 },
+    celebrateB: { x: 940, y: 940, width: 145, height: 262 },
+  };
 
   const audio = {
     context: null,
@@ -184,6 +208,10 @@
     pausedReason: "",
     lastFrame: 0,
     psychologyFx: 0,
+    collectElapsed: 0,
+    psychologiaDropsTarget: 1,
+    psychologiaDropsDone: 0,
+    psychologiaDropTimer: 0,
     leaderboardWeekKey: getIsoWeekKey(new Date()),
     leaderboardLevel: 1,
     leaderboardEntries: [],
@@ -410,6 +438,7 @@
     const mix = clamp(curve * 0.72 + levelBias, 0, 1);
     const diplomaSpeedLevelMultiplier = lerp(1, 1.42, levelStep);
     const spawnIntervalLevelMultiplier = lerp(1, 0.72, levelStep);
+    const pkaDelayLevelMultiplier = lerp(1, 0.62, levelStep);
     return {
       progress,
       curve: mix,
@@ -417,8 +446,8 @@
       diplomaSpeedJitter: lerp(0.18, 0.12, mix),
       spawnInterval: lerp(0.98, 0.38, mix) * spawnIntervalLevelMultiplier,
       extraSpawnChance: lerp(0.08, 0.21, mix) + levelStep * 0.05,
-      pkaDelayMin: lerp(15, 9, mix),
-      pkaDelayMax: lerp(21, 14, mix),
+      pkaDelayMin: Math.max(4.5, lerp(15, 9, mix) * pkaDelayLevelMultiplier),
+      pkaDelayMax: Math.max(6.5, lerp(21, 14, mix) * pkaDelayLevelMultiplier),
       pkaSpeed: lerp(280, 440, mix),
       pkaVerticalBoost: lerp(1.1, 1.34, mix),
     };
@@ -682,6 +711,32 @@
     });
   }
 
+  function drawBackdropSprite() {
+    const image = getArtImage("cityBackdrop");
+    if (!image) {
+      return false;
+    }
+
+    const w = view.width;
+    const h = view.height;
+    const scale = Math.max((w * 1.14) / image.width, (h * 1.08) / image.height);
+    const drawW = image.width * scale;
+    const drawH = image.height * scale;
+    const laneShift = state.player && Number.isFinite(state.player.x)
+      ? (state.player.x - w * 0.5) * 0.03
+      : 0;
+    const drift = Math.sin(performance.now() / 2400) * 4;
+    const maxPan = Math.max(0, (drawW - w) * 0.5 - 8);
+    const offsetX = clamp(laneShift + drift, -maxPan, maxPan);
+    const x = clamp((w - drawW) / 2 - offsetX, w - drawW, 0);
+    const y = (h - drawH) / 2;
+
+    ctx.fillStyle = "#06162c";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(image, x, y, drawW, drawH);
+    return true;
+  }
+
   function getLeaderboardScopeKey(weekKey, level) {
     return `${weekKey}::${clampLevel(level)}`;
   }
@@ -832,16 +887,18 @@
   function renderLeaderboard(entries = []) {
     leaderboardWeek.textContent = formatWeekLabel(state.leaderboardWeekKey, state.leaderboardLevel);
     leaderboardList.textContent = "";
+    const uniqueEntries = getUniqueLeaderboardEntries(entries);
 
-    if (!entries.length) {
+    if (!uniqueEntries.length) {
       const item = document.createElement("li");
       item.className = "leaderboard-entry leaderboard-empty";
       item.textContent = "Brak wyników w tym tygodniu dla tego poziomu.";
       leaderboardList.appendChild(item);
+      renderHudLeaderboard([]);
       return;
     }
 
-    entries.slice(0, 20).forEach((entry, index) => {
+    uniqueEntries.slice(0, 20).forEach((entry, index) => {
       const item = document.createElement("li");
       item.className = "leaderboard-entry";
 
@@ -859,6 +916,75 @@
 
       item.append(rank, name, score);
       leaderboardList.appendChild(item);
+    });
+
+    renderHudLeaderboard(uniqueEntries);
+  }
+
+  function getUniqueLeaderboardEntries(entries = []) {
+    const bestByNick = new Map();
+    for (const entry of entries) {
+      const nickname = String(entry?.nickname || "anon").trim();
+      const score = Number(entry?.score ?? 0);
+      const key = nickname.toLowerCase();
+      const existing = bestByNick.get(key);
+      if (!existing || score > existing.score) {
+        bestByNick.set(key, {
+          nickname,
+          score,
+          updated_at: entry?.updated_at || "",
+        });
+      }
+    }
+    return Array.from(bestByNick.values()).sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      const at = String(a.updated_at || "");
+      const bt = String(b.updated_at || "");
+      if (at !== bt) {
+        return at < bt ? -1 : 1;
+      }
+      return String(a.nickname).localeCompare(String(b.nickname), "pl");
+    });
+  }
+
+  function renderHudLeaderboard(entries = []) {
+    if (!hudLeaderboardList) {
+      return;
+    }
+
+    hudLeaderboardList.textContent = "";
+
+    if (!entries.length) {
+      hudLeaderboardList.classList.add("is-empty");
+      const item = document.createElement("li");
+      item.className = "hud-leaderboard-item is-empty";
+      item.textContent = "Brak wynikow dla tego poziomu.";
+      hudLeaderboardList.appendChild(item);
+      return;
+    }
+
+    hudLeaderboardList.classList.remove("is-empty");
+    const topEntries = entries.slice(0, 10);
+    topEntries.forEach((entry, index) => {
+      const item = document.createElement("li");
+      item.className = "hud-leaderboard-item";
+
+      const rank = document.createElement("span");
+      rank.className = "hud-leaderboard-rank";
+      rank.textContent = `#${index + 1}`;
+
+      const name = document.createElement("span");
+      name.className = "hud-leaderboard-name";
+      name.textContent = entry.nickname || "anon";
+
+      const score = document.createElement("span");
+      score.className = "hud-leaderboard-score";
+      score.textContent = String(entry.score ?? 0);
+
+      item.append(rank, name, score);
+      hudLeaderboardList.appendChild(item);
     });
   }
 
@@ -1063,6 +1189,7 @@
     state.endGameReason = "";
     state.gameoverTitle = "Koniec gry";
     state.timeLeft = ROUND_DURATION;
+    state.collectElapsed = 0;
     state.levelProgress = 0;
     state.levelGoal = getLevelGoal(state.level);
     state.levelScoreStart = state.score;
@@ -1074,14 +1201,32 @@
     state.bonusUnlocked = false;
     state.spawnTimer = 0;
     state.pkaTimer = randomRange(13, 18);
+    state.psychologiaDropsTarget = 1 + Math.floor(Math.random() * 3);
+    state.psychologiaDropsDone = 0;
+    state.psychologiaDropTimer = 0;
     state.pkaStorm = 0;
     state.cancelWave = 0;
     state.boss = null;
     state.attackCooldown = 0;
     state.transitionTimer = 0;
     clearBattlefield();
+    scheduleNextPsychologiaDrop();
     showBanner(`Poziom ${state.level}`, 1.0);
     syncHud();
+  }
+
+  function scheduleNextPsychologiaDrop() {
+    if (state.psychologiaDropsDone >= state.psychologiaDropsTarget) {
+      state.psychologiaDropTimer = Number.POSITIVE_INFINITY;
+      return;
+    }
+
+    const remainingDrops = state.psychologiaDropsTarget - state.psychologiaDropsDone;
+    const remainingTime = Math.max(6, state.timeLeft - 4);
+    const segment = remainingTime / Math.max(1, remainingDrops);
+    const minDelay = Math.max(3.8, segment * 0.45);
+    const maxDelay = Math.max(minDelay + 0.9, segment * 0.92);
+    state.psychologiaDropTimer = randomRange(minDelay, maxDelay);
   }
 
   function beginBossPhase() {
@@ -1113,7 +1258,7 @@
     state.bonusUnlocked = false;
     state.pkaTimer = randomRange(14, 20);
     clearBattlefield();
-    showBanner(`${boss.label} - poziom ${state.level}`, 1.35);
+    showBanner("Kim jest Renata?", 1.35);
     syncHud();
   }
 
@@ -1200,8 +1345,8 @@
       y: state.player.y - state.player.height * 0.4,
       vx: randomRange(-18, 18),
       vy: -420 - state.level * 18,
-      w: 40,
-      h: 28,
+      w: Math.round(40 * PLAYER_BOOK_SHOT_SCALE),
+      h: Math.round(28 * PLAYER_BOOK_SHOT_SCALE),
       life: 1.4,
     });
     addPopup("KSIĄŻKA!", state.player.x, state.player.y - state.player.height * 0.5, PALETTE.cream);
@@ -1434,9 +1579,9 @@
       y: -60,
       vx: 0,
       speed: difficulty.diplomaSpeed * speedFactor,
-      size: type === "mba" ? 56 : (type === "cash" || type === "bribe") ? 52 : type === "pka" ? 50 : type === "psychologia" ? 54 : 48,
-      w: type === "mba" ? 68 : (type === "cash" || type === "bribe") ? 62 : type === "pka" ? 72 : type === "psychologia" ? 70 : 46,
-      h: type === "mba" ? 48 : (type === "cash" || type === "bribe") ? 42 : type === "pka" ? 32 : type === "psychologia" ? 50 : 68,
+      size: type === "mba" ? 56 : (type === "cash" || type === "bribe") ? 52 : type === "pka" ? 50 : type === "psychologia" ? 48 : 48,
+      w: type === "mba" ? 68 : (type === "cash" || type === "bribe") ? 62 : type === "pka" ? 72 : type === "psychologia" ? 46 : 46,
+      h: type === "mba" ? 48 : (type === "cash" || type === "bribe") ? 42 : type === "pka" ? 32 : type === "psychologia" ? 68 : 68,
       caught: false,
       wobble: Math.random() * Math.PI * 2,
       theme: type === "diploma" ? options.theme || getDiplomaTheme(state.level) : null,
@@ -1792,9 +1937,11 @@
 
     if (state.phase === "collect") {
       state.timeLeft = Math.max(0, state.timeLeft - dt);
+      state.collectElapsed += dt;
       const difficulty = getDifficulty(getRoundProgress(), state.level);
       state.spawnTimer += dt;
       state.pkaTimer -= dt;
+      state.psychologiaDropTimer -= dt;
       if (state.pkaTimer <= 0) {
         triggerPkaAlert();
       }
@@ -1806,8 +1953,16 @@
         if (Math.random() < difficulty.extraSpawnChance) {
           spawnItem("diploma", { difficulty, theme: getDiplomaTheme(state.level) });
         }
-        if (state.level >= 2 && Math.random() < lerp(0.015, 0.03, difficulty.curve)) {
+      }
+
+      if (state.psychologiaDropsDone < state.psychologiaDropsTarget && state.psychologiaDropTimer <= 0 && state.collectElapsed >= 10) {
+        const hasActivePsychologia = state.items.some((item) => item.type === "psychologia");
+        if (!hasActivePsychologia) {
           spawnItem("psychologia", { difficulty });
+          state.psychologiaDropsDone += 1;
+          scheduleNextPsychologiaDrop();
+        } else {
+          state.psychologiaDropTimer = 0;
         }
       }
 
@@ -1827,6 +1982,10 @@
 
   function drawBackground() {
     const { width: w, height: h } = view;
+
+    if (drawBackdropSprite()) {
+      return;
+    }
 
     ctx.fillStyle = "#050506";
     ctx.fillRect(0, 0, w, h);
@@ -2759,6 +2918,32 @@
     ctx.fillText("BONUS", x, y + h * 0.72);
   }
 
+  function getPlayerSpriteCrop(moving) {
+    const frameTickFast = Math.floor(performance.now() / 120);
+    const cooldown = BOOK_COOLDOWN_BY_LEVEL[clampLevel(state.level) - 1] || 0.45;
+    const attackJustFired = state.phase === "boss" && state.attackCooldown > Math.max(0.08, cooldown - 0.14);
+
+    if (state.mode === "levelclear") {
+      return frameTickFast % 2 === 0 ? PLAYER_SPRITE_FRAMES.celebrateA : PLAYER_SPRITE_FRAMES.celebrateB;
+    }
+
+    if (attackJustFired) {
+      return frameTickFast % 2 === 0 ? PLAYER_SPRITE_FRAMES.attackA : PLAYER_SPRITE_FRAMES.attackB;
+    }
+
+    if (moving) {
+      const runFrames = [
+        PLAYER_SPRITE_FRAMES.runA,
+        PLAYER_SPRITE_FRAMES.runC,
+        PLAYER_SPRITE_FRAMES.runB,
+        PLAYER_SPRITE_FRAMES.runC,
+      ];
+      return runFrames[frameTickFast % runFrames.length];
+    }
+
+    return PLAYER_SPRITE_FRAMES.idleFront;
+  }
+
   function drawPlayer() {
     const x = state.player.x;
     const y = state.player.y;
@@ -2768,9 +2953,10 @@
     const target = laneX(state.player.lane);
     const moving = Math.abs(target - x) > 0.8;
     const facing = state.player.facing || 1;
+    const renderFacing = moving ? facing : 1;
     const step = Math.sin(state.player.runPhase);
     const stride = moving ? Math.round(step * 1.2) : 0;
-    const lean = moving ? Math.round(step * 0.5) * facing : 0;
+    const lean = moving ? Math.round(step * 0.5) * renderFacing : 0;
     const y0 = y - bodyH / 2 + bob;
 
     drawShadow(x, y0 + bodyH * 0.96, bodyW * 0.38, 11, 0.22);
@@ -2780,17 +2966,19 @@
     const ox = Math.round(x - (spriteW * scale) / 2) + lean * scale;
     const oy = Math.round(y0);
     const px = (gx, gy, gw, gh, color) => {
-      const drawX = facing === 1 ? gx : spriteW - gx - gw;
+      const drawX = renderFacing === 1 ? gx : spriteW - gx - gw;
       ctx.fillStyle = color;
       ctx.fillRect(ox + drawX * scale, oy + gy * scale, gw * scale, gh * scale);
     };
 
     if (drawAssetSprite("playerStudent", x, y0 + bodyH / 2, bodyW, bodyH, {
-      flipX: facing === -1,
+      flipX: renderFacing === -1,
       offsetX: lean * scale,
       offsetY: bob,
       scaleX: moving ? 1.02 : 1,
       scaleY: moving ? 0.98 : 1,
+      scale: 1.26,
+      sourceCrop: getPlayerSpriteCrop(moving),
     })) {
       if (state.psychologyFx > 0) {
         drawPsychologyOverlay(x, y0, bodyW, bodyH);
@@ -2895,6 +3083,12 @@
     const h = item.h;
 
     drawShadow(x, y + h, w, 10, 0.22);
+
+    if (drawAssetSprite("psychologia", x, y + h / 2, w, h, {
+      rotate: Math.sin((performance.now() / 130) + item.wobble) * 0.06,
+    })) {
+      return;
+    }
 
     const x0 = snap4(x - w / 2);
     const y0 = snap4(y);
